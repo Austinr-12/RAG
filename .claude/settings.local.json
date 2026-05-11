@@ -2,7 +2,8 @@
   "permissions": {
     "allow": [
       "Bash(git -C rag-knowledge-base check-ignore -v .env)",
-      "Bash(git -C rag-knowledge-base ls-files --error-unmatch .env)"
+      "Bash(git -C rag-knowledge-base ls-files --error-unmatch .env)",
+      "Bash(npx prisma *)"
     ]
   }
 }
