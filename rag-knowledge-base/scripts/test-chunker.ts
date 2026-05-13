@@ -1,7 +1,7 @@
 // scripts/test-chunker.ts
 // Quick smoke test for src/lib/rag/chunking.ts.
 // Run with:  npx tsx scripts/test-chunker.ts
-import { chunkText, CHUNK_SIZE, CHUNK_OVERLAP } from "../src/lib/rag/chunking";
+import { chunkText, CHUNK_SIZE, CHUNK_OVERLAP } from "../src/lib/rag/chunking.ts";
 
 const sample = `# Paper
 
@@ -69,16 +69,28 @@ if (oversized.length > 0) {
 }
 console.log(`\n✓ All ${chunks.length} chunks within chunkSize`);
 
-// Verify overlap actually present between consecutive chunks
+// Verify overlap actually present between consecutive chunks.
+// The merge step prepends `prev.slice(-maxOverlap)` to the next chunk, so
+// the next chunk should start with a substring drawn from the previous one.
+let overlapFailures = 0;
 for (let i = 1; i < chunks.length; i++) {
-  const prevTail = chunks[i - 1].slice(-50);
-  const currHead = chunks[i].slice(0, 50);
-  const hasOverlap = prevTail
-    .split(/\s+/)
-    .some((w) => w.length > 4 && currHead.includes(w));
-  if (!hasOverlap) {
-    console.warn(
-      `⚠ chunks ${i - 1}→${i}: no obvious overlap (may be fine at section boundaries)`,
-    );
+  const prev = chunks[i - 1];
+  const curr = chunks[i];
+  // Find the longest prefix of curr that appears in prev. We scan a window
+  // up to CHUNK_OVERLAP chars (plus a little slack for the joining space).
+  const maxProbe = Math.min(curr.length, CHUNK_OVERLAP + 4);
+  let overlapLen = 0;
+  for (let n = maxProbe; n >= 20; n--) {
+    if (prev.includes(curr.slice(0, n))) {
+      overlapLen = n;
+      break;
+    }
+  }
+  if (overlapLen === 0) {
+    console.error(`❌ chunks ${i - 1}→${i}: no overlap detected`);
+    overlapFailures++;
+  } else {
+    console.log(`✓ chunks ${i - 1}→${i}: ${overlapLen} chars of overlap`);
   }
 }
+if (overlapFailures > 0) process.exit(1);
