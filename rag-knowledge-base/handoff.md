@@ -1,13 +1,20 @@
 # Handoff — RAG Knowledge Base
 
-> Last updated: **2026-05-12**
+> Last updated: **2026-05-15**
 > Pick up by opening this file and saying "resume from handoff.md" in Claude Code.
+
+> ⚠️ **PROJECT MOVED.** The repo now lives at **`C:\dev\RAG`** (git root) with the app in
+> `C:\dev\RAG\rag-knowledge-base`. It used to be under `C:\Users\austi\OneDrive\Desktop\RAG`.
+> It was moved **out of OneDrive** because OneDrive Files-On-Demand placed cloud
+> placeholders over `node_modules`/`.next`; every `next dev` recompile thrashed the
+> OneDrive sync filter and froze the machine. Do all work in `C:\dev\RAG` now.
+> Two follow-ups still open — see "OneDrive migration" section below.
 
 ## TL;DR
 
-- **Phase 1 (foundation) is complete and verified.** Auth, Supabase + pgvector, Prisma schema, route protection — all live and smoke-tested at `localhost:3000`.
-- **Phase 2 (ingestion pipeline) is in progress.** [src/lib/rag/chunking.ts](src/lib/rag/chunking.ts) is written but the smoke test in [scripts/test-chunker.ts](scripts/test-chunker.ts) couldn't run — the npm registry was returning `ETIMEDOUT`, and `npx tsx` tried to fetch `tsx` on the fly.
-- **First task on resume:** validate the chunker (one of three options below), then build `embeddings.ts`.
+- **Phase 1 (foundation) is complete and verified.** Auth, Supabase + pgvector, Prisma schema, route protection.
+- **Phase 2 (ingestion pipeline) is COMPLETE and verified.** Chunker, embeddings, `getOrCreateUser`, transactional `ingest`, upload + list/delete API routes, and the documents UI are all written. Build + type-check clean; chunker and OpenAI-embedding smoke tests pass. Not yet exercised through the browser (needs a Clerk session + a real PDF/.txt).
+- **First task on resume:** manual end-to-end upload test at `/dashboard/documents` (see Phase 2 verification), then start Phase 3 (query + chat).
 
 ---
 
