@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
-import { PDFParse } from "pdf-parse";
 import { prisma } from "@/lib/prisma";
+import { extractText } from "@/lib/rag/extract";
 import { chunkText } from "@/lib/rag/chunking";
 import { embedBatch, EMBEDDING_DIMENSIONS } from "@/lib/rag/embeddings";
 
@@ -38,23 +38,6 @@ export async function ingest(input: IngestInput): Promise<IngestResult> {
   });
 
   return { documentId, chunkCount: chunks.length };
-}
-
-async function extractText(buffer: Buffer, mimeType: string): Promise<string> {
-  if (mimeType === "application/pdf") {
-    const parser = new PDFParse({ data: buffer });
-    try {
-      const { text } = await parser.getText();
-      return text;
-    } finally {
-      // Why: pdfjs spins up a worker; leaking it eventually OOMs the route.
-      await parser.destroy();
-    }
-  }
-  if (mimeType === "text/plain" || mimeType === "text/markdown") {
-    return buffer.toString("utf8");
-  }
-  throw new Error(`Unsupported mime type: ${mimeType}`);
 }
 
 type TxClient = Parameters<Parameters<typeof prisma.$transaction>[0]>[0];
