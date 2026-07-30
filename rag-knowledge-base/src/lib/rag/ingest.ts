@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { extractText } from "@/lib/rag/extract";
 import { chunkText } from "@/lib/rag/chunking";
 import { embedBatch, EMBEDDING_DIMENSIONS } from "@/lib/rag/embeddings";
+import { UPLOAD_LIMITS } from "@/lib/security/rateLimit";
 
 export type IngestInput = {
   buffer: Buffer;
@@ -13,12 +14,34 @@ export type IngestInput = {
 
 export type IngestResult = { documentId: string; chunkCount: number };
 
+// Why: distinct error class so the upload route can map this to HTTP 413 without
+// swallowing other errors or leaking raw messages from unexpected failures.
+export class ChunkLimitExceededError extends Error {
+  constructor(chunkCount: number, limit: number) {
+    super(
+      `File would produce ${chunkCount} chunks (limit ${limit}). Split the file into smaller pieces.`,
+    );
+    this.name = "ChunkLimitExceededError";
+  }
+}
+
+// Why: filename is displayed and stored — cap length so pathological inputs
+// (huge names, direction-override tricks) don't bloat the DB or the UI.
+const MAX_FILENAME_LENGTH = 255;
+
 export async function ingest(input: IngestInput): Promise<IngestResult> {
   const text = await extractText(input.buffer, input.mimeType);
   if (!text.trim()) throw new Error("No extractable text in file");
 
   const chunks = chunkText(text);
   if (chunks.length === 0) throw new Error("Chunking produced no chunks");
+  // Why: cap enforced BEFORE embedBatch so a spammy upload can't burn OpenAI
+  // credits before being rejected.
+  if (chunks.length > UPLOAD_LIMITS.maxChunksPerFile) {
+    throw new ChunkLimitExceededError(chunks.length, UPLOAD_LIMITS.maxChunksPerFile);
+  }
+
+  const filename = input.filename.slice(0, MAX_FILENAME_LENGTH);
 
   const embeddings = await embedBatch(chunks);
   if (embeddings.some((e) => e.length !== EMBEDDING_DIMENSIONS)) {
@@ -30,7 +53,7 @@ export async function ingest(input: IngestInput): Promise<IngestResult> {
   // one transaction prevents an orphan Document if the chunk insert fails.
   const documentId = await prisma.$transaction(async (tx) => {
     const doc = await tx.document.create({
-      data: { name: input.filename, userId: input.userId },
+      data: { name: filename, userId: input.userId },
       select: { id: true },
     });
     await insertChunks(tx, doc.id, chunks, embeddings);

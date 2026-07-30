@@ -1,11 +1,24 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getOrCreateUser } from "@/lib/auth/getOrCreateUser";
+import {
+  BUCKETS,
+  READ_LIMITS,
+  checkRateLimit,
+} from "@/lib/security/rateLimit";
 
 export const runtime = "nodejs";
 
 export async function GET() {
   const user = await getOrCreateUser();
+  const gate = checkRateLimit(
+    BUCKETS.readMinute,
+    user.id,
+    READ_LIMITS.perMinute,
+    60_000,
+  );
+  if (!gate.ok) return tooMany(gate.retryAfterSec);
+
   // Why: _count.chunks avoids loading chunk rows just to count them.
   const docs = await prisma.document.findMany({
     where: { userId: user.id },
@@ -29,9 +42,19 @@ export async function GET() {
 
 export async function DELETE(request: Request) {
   const user = await getOrCreateUser();
+  const gate = checkRateLimit(
+    BUCKETS.readMinute,
+    user.id,
+    READ_LIMITS.perMinute,
+    60_000,
+  );
+  if (!gate.ok) return tooMany(gate.retryAfterSec);
+
   const id = new URL(request.url).searchParams.get("id");
-  if (!id) {
-    return NextResponse.json({ error: "Missing id" }, { status: 400 });
+  // Why: cuid ids are ~25 chars of [a-z0-9]. Reject obvious garbage before hitting
+  // the DB so scanners spamming random ids don't generate query load.
+  if (!id || !/^[a-z0-9]{10,64}$/.test(id)) {
+    return NextResponse.json({ error: "Invalid id" }, { status: 400 });
   }
   // Why: deleteMany scoped to userId prevents cross-user deletion in one query.
   // Chunks are removed by schema's onDelete: Cascade.
@@ -42,4 +65,11 @@ export async function DELETE(request: Request) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
   return NextResponse.json({ ok: true });
+}
+
+function tooMany(retryAfterSec: number): NextResponse {
+  return NextResponse.json(
+    { error: "Too many requests", retryAfterSec },
+    { status: 429, headers: { "Retry-After": String(retryAfterSec) } },
+  );
 }

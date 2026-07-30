@@ -1,6 +1,12 @@
 import { NextResponse } from "next/server";
-import { ingest } from "@/lib/rag/ingest";
+import { prisma } from "@/lib/prisma";
+import { ingest, ChunkLimitExceededError } from "@/lib/rag/ingest";
 import { getOrCreateUser } from "@/lib/auth/getOrCreateUser";
+import {
+  BUCKETS,
+  UPLOAD_LIMITS,
+  checkRateLimit,
+} from "@/lib/security/rateLimit";
 
 // Why: pdf-parse pulls in pdfjs + canvas which are Node-only; being explicit
 // prevents an accidental edge-runtime regression if a parent segment opts in.
@@ -16,9 +22,38 @@ const ALLOWED_MIME = new Set([
 ]);
 
 export async function POST(request: Request) {
-  try {
-    const user = await getOrCreateUser();
+  const user = await getOrCreateUser();
 
+  const minuteCheck = checkRateLimit(
+    BUCKETS.uploadMinute,
+    user.id,
+    UPLOAD_LIMITS.perMinute,
+    60_000,
+  );
+  if (!minuteCheck.ok) {
+    return tooMany("Too many uploads. Slow down.", minuteCheck.retryAfterSec);
+  }
+  const dayCheck = checkRateLimit(
+    BUCKETS.uploadDay,
+    user.id,
+    UPLOAD_LIMITS.perDay,
+    24 * 60 * 60_000,
+  );
+  if (!dayCheck.ok) {
+    return tooMany("Daily upload limit reached.", dayCheck.retryAfterSec);
+  }
+
+  const docCount = await prisma.document.count({ where: { userId: user.id } });
+  if (docCount >= UPLOAD_LIMITS.maxDocumentsPerUser) {
+    return NextResponse.json(
+      {
+        error: `Document quota reached (${UPLOAD_LIMITS.maxDocumentsPerUser}). Delete some before uploading more.`,
+      },
+      { status: 409 },
+    );
+  }
+
+  try {
     const form = await request.formData();
     const file = form.get("file");
     if (!(file instanceof File)) {
@@ -49,10 +84,21 @@ export async function POST(request: Request) {
 
     return NextResponse.json(result, { status: 201 });
   } catch (err) {
+    if (err instanceof ChunkLimitExceededError) {
+      return NextResponse.json({ error: err.message }, { status: 413 });
+    }
+    // Why: raw err.message can leak SQL text, filesystem paths, or OpenAI billing
+    // errors. Log details server-side, return a generic message to the client.
     console.error("[upload] failed", err);
-    const message = err instanceof Error ? err.message : "Upload failed";
-    return NextResponse.json({ error: message }, { status: 500 });
+    return NextResponse.json({ error: "Upload failed" }, { status: 500 });
   }
+}
+
+function tooMany(message: string, retryAfterSec: number): NextResponse {
+  return NextResponse.json(
+    { error: message, retryAfterSec },
+    { status: 429, headers: { "Retry-After": String(retryAfterSec) } },
+  );
 }
 
 function inferMime(name: string): string {
