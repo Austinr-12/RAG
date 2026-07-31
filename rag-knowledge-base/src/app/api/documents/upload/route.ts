@@ -1,7 +1,10 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { ingest, ChunkLimitExceededError } from "@/lib/rag/ingest";
-import { getOrCreateUser } from "@/lib/auth/getOrCreateUser";
+import {
+  getOrCreateUser,
+  UnauthenticatedError,
+} from "@/lib/auth/getOrCreateUser";
 import {
   BUCKETS,
   UPLOAD_LIMITS,
@@ -22,7 +25,15 @@ const ALLOWED_MIME = new Set([
 ]);
 
 export async function POST(request: Request) {
-  const user = await getOrCreateUser();
+  let user: { id: string; clerkId: string };
+  try {
+    user = await getOrCreateUser();
+  } catch (err) {
+    if (err instanceof UnauthenticatedError) {
+      return NextResponse.json({ error: "Unauthenticated" }, { status: 401 });
+    }
+    throw err;
+  }
 
   const minuteCheck = checkRateLimit(
     BUCKETS.uploadMinute,

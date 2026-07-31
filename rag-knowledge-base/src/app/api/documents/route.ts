@@ -1,6 +1,9 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { getOrCreateUser } from "@/lib/auth/getOrCreateUser";
+import {
+  getOrCreateUser,
+  UnauthenticatedError,
+} from "@/lib/auth/getOrCreateUser";
 import {
   BUCKETS,
   READ_LIMITS,
@@ -9,8 +12,23 @@ import {
 
 export const runtime = "nodejs";
 
+async function requireUser() {
+  try {
+    return await getOrCreateUser();
+  } catch (err) {
+    if (err instanceof UnauthenticatedError) return null;
+    throw err;
+  }
+}
+
+// Why: fresh response per call — NextResponse bodies are streams and can't be
+// safely shared across concurrent requests.
+const unauthenticated = () =>
+  NextResponse.json({ error: "Unauthenticated" }, { status: 401 });
+
 export async function GET() {
-  const user = await getOrCreateUser();
+  const user = await requireUser();
+  if (!user) return unauthenticated();
   const gate = checkRateLimit(
     BUCKETS.readMinute,
     user.id,
@@ -41,7 +59,8 @@ export async function GET() {
 }
 
 export async function DELETE(request: Request) {
-  const user = await getOrCreateUser();
+  const user = await requireUser();
+  if (!user) return unauthenticated();
   const gate = checkRateLimit(
     BUCKETS.readMinute,
     user.id,
