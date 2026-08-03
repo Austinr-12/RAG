@@ -50,6 +50,12 @@ export default function RootLayout({
                   >
                     Dashboard
                   </Link>
+                  <Link
+                    href="/dashboard/documents"
+                    className="text-zinc-700 hover:text-zinc-950 dark:text-zinc-300 dark:hover:text-white"
+                  >
+                    Documents
+                  </Link>
                   <UserButton />
                 </Show>
                 <Show when="signed-out">
