@@ -44,15 +44,33 @@ export function FileUpload({ onUploaded }: Props) {
 
   return (
     <div
-      onDragOver={(e) => {
+      // Why: dragenter/dragover BOTH need preventDefault or the browser refuses to
+      // fire drop. dragOver also sets dropEffect so the cursor shows the copy icon.
+      onDragEnter={(e) => {
         e.preventDefault();
+        e.stopPropagation();
         setDragging(true);
       }}
-      onDragLeave={() => setDragging(false)}
+      onDragOver={(e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        e.dataTransfer.dropEffect = "copy";
+      }}
+      // Why: dragLeave fires whenever the cursor crosses a child element (button,
+      // text). Only reset when we've actually left the drop zone — checked via
+      // relatedTarget not being a descendant of the zone.
+      onDragLeave={(e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        if (!e.currentTarget.contains(e.relatedTarget as Node | null)) {
+          setDragging(false);
+        }
+      }}
       onDrop={(e) => {
         e.preventDefault();
+        e.stopPropagation();
         setDragging(false);
-        const file = e.dataTransfer.files[0];
+        const file = e.dataTransfer.files?.[0];
         if (file) void upload(file);
       }}
       className={`rounded-xl border-2 border-dashed p-10 text-center transition ${
