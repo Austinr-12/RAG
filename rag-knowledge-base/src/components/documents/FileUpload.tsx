@@ -73,21 +73,83 @@ export function FileUpload({ onUploaded }: Props) {
         const file = e.dataTransfer.files?.[0];
         if (file) void upload(file);
       }}
-      className={`rounded-xl border-2 border-dashed p-10 text-center transition ${
+      className={`group relative overflow-hidden rounded-2xl border-2 border-dashed p-12 text-center transition-all ${
         dragging
-          ? "border-zinc-900 bg-zinc-50 dark:border-white dark:bg-zinc-900"
-          : "border-zinc-300 dark:border-zinc-700"
+          ? "scale-[1.01] border-zinc-900 bg-zinc-50 dark:border-white dark:bg-zinc-900"
+          : "border-zinc-300 hover:border-zinc-400 dark:border-zinc-700 dark:hover:border-zinc-600"
       }`}
     >
-      <p className="text-sm text-zinc-700 dark:text-zinc-300">
-        {busy ? "Uploading and indexing…" : "Drop a PDF, .txt, or .md file here"}
+      {/* Subtle inner glow while dragging — modern touch, not distracting. */}
+      <div
+        aria-hidden
+        className={`pointer-events-none absolute inset-0 -z-10 bg-[radial-gradient(circle_at_center,rgba(0,0,0,0.04),transparent_60%)] opacity-0 transition-opacity duration-300 dark:bg-[radial-gradient(circle_at_center,rgba(255,255,255,0.06),transparent_60%)] ${
+          dragging ? "opacity-100" : ""
+        }`}
+      />
+
+      <div
+        className={`mx-auto flex h-12 w-12 items-center justify-center rounded-2xl border transition ${
+          busy
+            ? "border-zinc-200 bg-zinc-50 dark:border-zinc-800 dark:bg-zinc-900"
+            : "border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-950"
+        }`}
+      >
+        {busy ? (
+          <svg
+            viewBox="0 0 24 24"
+            className="h-5 w-5 animate-spin text-zinc-500"
+            aria-hidden
+          >
+            <circle
+              cx="12"
+              cy="12"
+              r="9"
+              fill="none"
+              stroke="currentColor"
+              strokeOpacity="0.2"
+              strokeWidth="2"
+            />
+            <path
+              d="M21 12a9 9 0 0 0-9-9"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+            />
+          </svg>
+        ) : (
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.75"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            className="h-5 w-5"
+            aria-hidden
+          >
+            <path d="M12 3v12m0 0-4-4m4 4 4-4" />
+            <path d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2" />
+          </svg>
+        )}
+      </div>
+
+      <p className="mt-4 text-sm font-medium text-zinc-800 dark:text-zinc-200">
+        {busy
+          ? "Uploading and indexing…"
+          : dragging
+            ? "Release to upload"
+            : "Drop a file here or click to browse"}
       </p>
-      <p className="mt-1 text-xs text-zinc-500">or</p>
+      <p className="mt-1 text-xs text-zinc-500">
+        PDF, plain text, or markdown · up to 10&thinsp;MB
+      </p>
+
       <button
         type="button"
         disabled={busy}
         onClick={() => inputRef.current?.click()}
-        className="mt-3 inline-flex h-9 items-center rounded-full bg-zinc-900 px-4 text-sm font-medium text-white hover:bg-zinc-800 disabled:opacity-50 dark:bg-white dark:text-zinc-900"
+        className="mt-5 inline-flex h-9 items-center rounded-full bg-zinc-900 px-4 text-sm font-medium text-white shadow-sm transition hover:bg-zinc-800 disabled:opacity-50 dark:bg-white dark:text-zinc-900 dark:hover:bg-zinc-200"
       >
         Choose file
       </button>
@@ -103,7 +165,7 @@ export function FileUpload({ onUploaded }: Props) {
         }}
       />
       {error && (
-        <p className="mt-3 text-sm text-red-600 dark:text-red-400">{error}</p>
+        <p className="mt-4 text-sm text-red-600 dark:text-red-400">{error}</p>
       )}
     </div>
   );
