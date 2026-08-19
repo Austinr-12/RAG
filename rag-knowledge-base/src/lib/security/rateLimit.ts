@@ -14,6 +14,12 @@ export const READ_LIMITS = {
   perMinute: 60,
 } as const;
 
+export const CHAT_LIMITS = {
+  perMinute: 10,
+  perDay: 200,
+  maxMessageChars: 2000,
+} as const;
+
 type WindowState = { count: number; resetAt: number };
 
 const buckets = new Map<string, WindowState>();
@@ -51,4 +57,6 @@ export const BUCKETS = {
   uploadMinute: "upload:min",
   uploadDay: "upload:day",
   readMinute: "read:min",
+  chatMinute: "chat:min",
+  chatDay: "chat:day",
 } as const;

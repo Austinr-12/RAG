@@ -9,6 +9,8 @@
     "lint": "eslint"
   },
   "dependencies": {
+    "@ai-sdk/openai": "^4.0.43",
+    "@ai-sdk/react": "^4.0.72",
     "@clerk/nextjs": "^7.3.3",
     "@langchain/core": "^1.1.45",
     "@langchain/openai": "^1.4.5",
