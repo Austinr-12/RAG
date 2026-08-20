@@ -50,6 +50,7 @@ export default function RootLayout({
                 <Show when="signed-in">
                   <NavLink href="/dashboard">Dashboard</NavLink>
                   <NavLink href="/dashboard/documents">Documents</NavLink>
+                  <NavLink href="/dashboard/chat">Chat</NavLink>
                   <div className="ml-2">
                     <UserButton />
                   </div>
