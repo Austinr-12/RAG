@@ -25,10 +25,9 @@ export default function DashboardPage() {
           }
         />
         <FeatureCard
+          href="/dashboard/chat"
           title="Chat"
           body="Ask questions and get answers cited to the exact chunks that support them."
-          badge="Coming in Phase 3"
-          disabled
           icon={
             <>
               <path d="M21 12a8 8 0 1 1-3.3-6.5" />
