@@ -95,10 +95,14 @@ export async function POST(request: Request) {
         : m,
     );
 
+    // Why: convertToModelMessages became async in ai v7 (may resolve remote
+    // file parts before sending). Await it before passing to streamText.
+    const modelMessages = await convertToModelMessages(augmentedMessages);
+
     const result = streamText({
       model: openai(CHAT_MODEL),
       system: SYSTEM_PROMPT,
-      messages: convertToModelMessages(augmentedMessages),
+      messages: modelMessages,
     });
 
     return result.toUIMessageStreamResponse();
