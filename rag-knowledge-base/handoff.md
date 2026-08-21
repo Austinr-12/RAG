@@ -1,6 +1,6 @@
 # Handoff — RAG Knowledge Base
 
-> Last updated: **2026-08-18**
+> Last updated: **2026-08-21**
 > Pick up by opening this file and saying "resume from handoff.md" in Claude Code.
 
 > ⚠️ **PROJECT LOCATION.** Repo lives at **`C:\dev\RAG`** (git root) with the app in
@@ -10,10 +10,12 @@
 
 ## TL;DR
 
-- **Phase 1 (foundation) — complete and verified.** Auth, Supabase + pgvector, Prisma schema, route protection.
-- **Phase 2 (ingestion pipeline) — complete, verified end-to-end, hardened, and visually polished.** Upload → chunk → embed → store cycle works through the browser with a real Clerk session and a real file. Security review applied (7 of 9 findings fixed; 2 deferred with rationale below). UI reworked to a modern-minimalist zinc aesthetic.
+- **Phase 1 (foundation) — complete and verified.**
+- **Phase 2 (ingestion pipeline) — complete, verified, hardened, polished.**
+- **Phase 3 (retrieval + chat) — COMPLETE and verified end-to-end.** `/api/chat` streams cited answers from `gpt-4o-mini` grounded in pgvector KNN retrieval. Golden path works (correct answer + citation for Aurora price + warranty questions), fallback works (refuses questions not in docs), abuse paths work (11th message/min → 429, 3000-char message → 413).
 - **Recurring gotcha:** Supabase free tier auto-pauses the project. When you get `FATAL: (ENOTFOUND) tenant/user postgres.rcmwbfirmelhbnokqiuu not found`, go to supabase.com/dashboard → Restore project → wait ~90s → restart `next dev`.
-- **First task on resume:** start Phase 3 — query + chat. Ingestion is not the bottleneck anymore.
+- **AI SDK version pivot (recorded, don't re-discover):** `ai` v7 requires awaiting `convertToModelMessages()` (was sync in v6). `@ai-sdk/openai` + `@ai-sdk/react` install their own `ai@7` peer — top-level `ai` must be v7 to unify types.
+- **First task on resume:** start Phase 4 — hybrid search + re-ranking + eval framework. This is the "resume payload" phase (per the original plan): quantifiable retrieval quality metrics for the portfolio.
 
 ---
 
