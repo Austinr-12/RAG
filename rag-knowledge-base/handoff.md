@@ -61,28 +61,51 @@ Unchanged from prior handoff — auth, pgvector, Prisma singleton, route protect
 
 **Decision recorded:** custom chunker instead of `@langchain/textsplitters`.
 
-### Phase 3 — Query + chat (NOT STARTED — resume here)
+### Phase 3 — Query + chat ✅ COMPLETE
 
-Files to create:
-- `src/lib/rag/retrieve.ts` — embed the query, run pgvector similarity search, return top-K chunks with source metadata
-- `src/app/api/chat/route.ts` — POST endpoint that takes a question, retrieves, streams a generated answer via OpenAI, cites the chunks it used. **Apply the same rate limiting** from `src/lib/security/rateLimit.ts`.
-- `src/components/chat/*` — split-pane UI (chat on the left, sources on the right per handoff §"UI direction")
-- Wire into `/dashboard` — currently the "Chat" card is disabled with a "Coming in Phase 3" badge. Flip it to a real link once the route exists.
+| Component | State |
+|---|---|
+| [src/lib/rag/retrieve.ts](src/lib/rag/retrieve.ts) — top-K pgvector KNN, userId-scoped | ✅ |
+| [src/lib/rag/prompt.ts](src/lib/rag/prompt.ts) — SYSTEM_PROMPT + `buildRetrievalPrompt`; instructs blockquote citations | ✅ |
+| [src/app/api/chat/route.ts](src/app/api/chat/route.ts) — auth → rate limit (10/min, 200/day) → validate → retrieve top-5 → `streamText` → `toUIMessageStreamResponse()` | ✅ |
+| [src/components/chat/ChatPanel.tsx](src/components/chat/ChatPanel.tsx) — v7 `useChat` (self-managed input), Enter-to-send, Stop button, typing dots, auto-scroll | ✅ |
+| [src/components/chat/MessageBubble.tsx](src/components/chat/MessageBubble.tsx) — parses `> ` blockquotes into styled citation cards; supports `**bold**` + `- ` bullets. No markdown lib needed. | ✅ |
+| [src/app/dashboard/chat/page.tsx](src/app/dashboard/chat/page.tsx) — page shell | ✅ |
+| Dashboard card + nav wired to `/dashboard/chat` | ✅ |
 
-Retrieval SQL pattern (works with pgvector — the `<=>` operator gives cosine distance, order ASC for most similar):
+**Design chosen (locked in during this phase):**
+- Streaming: Vercel AI SDK (`ai@7` + `@ai-sdk/openai@4` + `@ai-sdk/react@4`)
+- Chat history: session-only (React state; refresh clears)
+- Citations: inline highlight-and-quote in the message body — no split-pane sources panel
+- Model: `gpt-4o-mini` (see `CHAT_MODEL` in `prompt.ts`)
+
+**Retrieval SQL pattern used** (works with pgvector — `<=>` = cosine distance, order ASC for most similar):
 ```sql
-SELECT id, content, "documentId"
-FROM "Chunk"
-WHERE "documentId" IN (
-  SELECT id FROM "Document" WHERE "userId" = $1
-)
-ORDER BY embedding <=> $2::vector
-LIMIT 8;
+SELECT c.id AS "chunkId", c.content, c.index, c."documentId",
+       d.name AS "documentName",
+       1 - (c.embedding <=> $2::vector) AS similarity
+FROM "Chunk" c
+JOIN "Document" d ON d.id = c."documentId"
+WHERE d."userId" = $1
+ORDER BY c.embedding <=> $2::vector
+LIMIT $3;
 ```
-`$1` = userId from `getOrCreateUser`, `$2` = `JSON.stringify(queryEmbedding)`. Scoping by userId in the subquery is the cross-tenant guard.
+`$1` = userId from `getOrCreateUser` (cross-tenant guard), `$2` = `JSON.stringify(queryEmbedding)`, `$3` = k.
 
-### Phase 4 — Hybrid search, re-ranking, eval (not started — the resume payload)
-### Phase 5 — Polish + ship (not started, though visual polish is well ahead of schedule)
+### Phase 4 — Hybrid search, re-ranking, eval (NOT STARTED — resume here)
+
+This is the "resume payload" phase — the portfolio-defining work. Concrete tasks:
+- `src/lib/rag/hybrid.ts` — combine dense vector retrieval with BM25/tsvector keyword search using reciprocal rank fusion. Postgres has native full-text via `to_tsvector` — no new dep needed.
+- `src/lib/rag/rerank.ts` — optional cross-encoder rerank step (Cohere Rerank API or OpenAI-based). Improves precision when K is small.
+- `src/lib/eval/` — evaluation harness: a small set of question+expected-source pairs, runs retrieval, scores hit@K and MRR. Report a before/after table.
+- `src/app/dashboard/eval/page.tsx` — optional in-app eval dashboard showing metrics. Or keep it a CLI script and screenshot for the portfolio.
+
+### Phase 5 — Polish + ship (not started; visual polish already well ahead of schedule)
+- Persistence for chat history (Conversation + Message Prisma models) — currently session-only
+- Pagination on `GET /api/documents` (deferred from security review)
+- Swap in-memory rate limiter → Upstash for multi-instance deploys
+- Credential rotation before public deploy (still open from Phase 1)
+- Deploy to Vercel
 
 ---
 
@@ -230,4 +253,4 @@ This handoff doc is for **you** (the human) to skim, not for Claude.
 
 ## Suggested first message when resuming
 
-> Resume from handoff.md. Phases 1 and 2 are done and verified. Start Phase 3 — retrieval + chat. First step: build `src/lib/rag/retrieve.ts` that embeds a query and runs a pgvector similarity search scoped by userId. Then wire an `/api/chat` route that streams a cited answer, applying the existing rate limiter from `src/lib/security/rateLimit.ts`.
+> Resume from handoff.md. Phases 1, 2, and 3 are done and verified end-to-end. Start Phase 4 — hybrid search + re-ranking + eval. First step: sketch the eval harness (question → expected-source pairs → hit@K + MRR) so we have a baseline metric BEFORE adding hybrid search. Then implement `src/lib/rag/hybrid.ts` (dense + tsvector BM25 with reciprocal rank fusion) and compare against baseline.
