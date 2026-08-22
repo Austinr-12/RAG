@@ -93,12 +93,16 @@ async function sparseCandidates(
   query: string,
   limit: number,
 ): Promise<Row[]> {
-  // Why: `websearch_to_tsquery` handles user-typed queries (quoted phrases,
-  // OR, negation) without throwing on punctuation the way `plainto_tsquery`
-  // does not — but plainto is simpler and matches most user questions. We
-  // use `websearch_to_tsquery` for its robustness to natural-language input.
-  // `ts_rank_cd` with normalization=1 divides by 1 + log(doc length) so long
-  // chunks don't dominate.
+  // Why: `websearch_to_tsquery` AND-joins terms — that misses too many real
+  // hits when the query has words that don't appear in the target chunk
+  // (e.g. "What is AuroraCare+ and how much does it *cost*?" against a
+  // chunk that mentions AuroraCare+ but uses "protection plan" instead of
+  // "cost"). We build an OR-joined tsquery in JS so ANY meaningful term
+  // matches, then let `ts_rank_cd` order by relevance. Documents with more
+  // matching terms rank higher naturally.
+  const tsquery = buildTsQuery(query);
+  if (!tsquery) return [];
+
   return prisma.$queryRawUnsafe<Row[]>(
     `SELECT
        c.id            AS "chunkId",
@@ -110,13 +114,31 @@ async function sparseCandidates(
      FROM "Chunk" c
      JOIN "Document" d ON d.id = c."documentId"
      WHERE d."userId" = $1
-       AND to_tsvector('english', c.content) @@ websearch_to_tsquery('english', $2)
-     ORDER BY ts_rank_cd(to_tsvector('english', c.content), websearch_to_tsquery('english', $2), 1) DESC
+       AND to_tsvector('english', c.content) @@ to_tsquery('english', $2)
+     ORDER BY ts_rank_cd(to_tsvector('english', c.content), to_tsquery('english', $2), 1) DESC
      LIMIT $3`,
     userId,
-    query,
+    tsquery,
     limit,
   );
+}
+
+// Why: build a safe OR-joined tsquery from user input. Strip everything except
+// word chars, hyphens, and plus signs so nothing the user types can produce
+// invalid tsquery syntax. Drop 1-char tokens (mostly stop-word residue and
+// punctuation artifacts). No stop-word filtering here — Postgres handles that
+// via the 'english' dictionary and treats stop-words as valid but zero-weight.
+function buildTsQuery(query: string): string {
+  const tokens = query
+    .toLowerCase()
+    .replace(/[^a-z0-9+\-\s]/g, " ")
+    .split(/\s+/)
+    .filter((t) => t.length > 1)
+    // Escape trailing plus so tsquery doesn't parse it as a prefix operator.
+    // Same for hyphens at the start (which mean NOT).
+    .map((t) => t.replace(/^-+|[+]+$/g, ""))
+    .filter((t) => t.length > 1);
+  return tokens.join(" | ");
 }
 
 function reciprocalRankFusion(lists: Row[][]): Row[] {

@@ -5,7 +5,7 @@
 | Strategy | n | hit@K | MRR | mean top-1 sim |
 | --- | --- | --- | --- | --- |
 | dense-only | 12 | 0.917 | 0.861 | 0.537 |
-| hybrid-rrf | 12 | 0.917 | 0.917 | 0.531 |
+| hybrid-rrf | 12 | 1.000 | 0.944 | 0.531 |
 
 ## Per-question rank of first relevant chunk
 
@@ -20,9 +20,9 @@
 | q7-recycling | How do I recycle my old Aurora device? | #1 | #1 |
 | q8-firmware-trackpad | The trackpad is unresponsive after a firmware update — what should I do? | #1 | #1 |
 | q9-battery-replacement-13 | How much does it cost to replace the battery on the 13 inch model? | #1 | #1 |
-| q10-auroracare-plus | What is AuroraCare+ and how much does it cost? | miss | miss |
+| q10-auroracare-plus | What is AuroraCare+ and how much does it cost? | miss | #1 |
 | q11-care-centers | How many Aurora Care Centers are there worldwide? | #1 | #1 |
-| q12-encryption-setup | Is full-disk encryption required? | #3 | #1 |
+| q12-encryption-setup | Is full-disk encryption required? | #3 | #3 |
 
 > `miss` = no chunk in top-K matched any expected substring.
 > `#N` = first relevant chunk was at rank N (lower is better).
