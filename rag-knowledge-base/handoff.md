@@ -13,6 +13,7 @@
 - **Phase 1 (foundation) — complete and verified.**
 - **Phase 2 (ingestion pipeline) — complete, verified, hardened, polished.**
 - **Phase 3 (retrieval + chat) — COMPLETE and verified end-to-end.** `/api/chat` streams cited answers from `gpt-4o-mini` grounded in pgvector KNN retrieval. Golden path works (correct answer + citation for Aurora price + warranty questions), fallback works (refuses questions not in docs), abuse paths work (11th message/min → 429, 3000-char message → 413).
+- **Phase 4 (hybrid search + eval harness) — COMPLETE.** Eval harness runs 12 Aurora-derived questions against any registered retriever, scores hit@K + MRR + mean top-1 similarity, and writes a markdown comparison to `eval-results.md`. Hybrid retrieval (dense + Postgres `ts_rank_cd` sparse, merged via RRF with k=60) is now the production retriever wired into `/api/chat`. Results: **hit@5 0.917 → 1.000, MRR 0.861 → 0.944.**
 - **Recurring gotcha:** Supabase free tier auto-pauses the project. When you get `FATAL: (ENOTFOUND) tenant/user postgres.rcmwbfirmelhbnokqiuu not found`, go to supabase.com/dashboard → Restore project → wait ~90s → restart `next dev`.
 - **AI SDK version pivot (recorded, don't re-discover):** `ai` v7 requires awaiting `convertToModelMessages()` (was sync in v6). `@ai-sdk/openai` + `@ai-sdk/react` install their own `ai@7` peer — top-level `ai` must be v7 to unify types.
 - **First task on resume:** start Phase 4 — hybrid search + re-ranking + eval framework. This is the "resume payload" phase (per the original plan): quantifiable retrieval quality metrics for the portfolio.
@@ -92,13 +93,37 @@ LIMIT $3;
 ```
 `$1` = userId from `getOrCreateUser` (cross-tenant guard), `$2` = `JSON.stringify(queryEmbedding)`, `$3` = k.
 
-### Phase 4 — Hybrid search, re-ranking, eval (NOT STARTED — resume here)
+### Phase 4 — Hybrid search + eval ✅ COMPLETE
 
-This is the "resume payload" phase — the portfolio-defining work. Concrete tasks:
-- `src/lib/rag/hybrid.ts` — combine dense vector retrieval with BM25/tsvector keyword search using reciprocal rank fusion. Postgres has native full-text via `to_tsvector` — no new dep needed.
-- `src/lib/rag/rerank.ts` — optional cross-encoder rerank step (Cohere Rerank API or OpenAI-based). Improves precision when K is small.
-- `src/lib/eval/` — evaluation harness: a small set of question+expected-source pairs, runs retrieval, scores hit@K and MRR. Report a before/after table.
-- `src/app/dashboard/eval/page.tsx` — optional in-app eval dashboard showing metrics. Or keep it a CLI script and screenshot for the portfolio.
+| Component | State |
+|---|---|
+| [src/lib/eval/questions.ts](src/lib/eval/questions.ts) — 12 Aurora Q→expected-substring pairs, categorized | ✅ |
+| [src/lib/eval/metrics.ts](src/lib/eval/metrics.ts) — hit@K, MRR, mean top-1 similarity | ✅ |
+| [src/lib/eval/runner.ts](src/lib/eval/runner.ts) — decoupled from retriever; markdown comparison table | ✅ |
+| [scripts/eval.ts](scripts/eval.ts) — CLI: `npm run eval [--user-email <e>] [--user-id <id>] [--k <n>]` | ✅ |
+| [scripts/debug-retrieve.ts](scripts/debug-retrieve.ts) — one-off: dump top-5 for a query, both strategies | ✅ |
+| [src/lib/rag/hybrid.ts](src/lib/rag/hybrid.ts) — dense + `ts_rank_cd` sparse, RRF merge (k=60), over-fetch 3× | ✅ |
+| `/api/chat/route.ts` wired to `hybridRetrieve` | ✅ |
+| [eval-results.md](eval-results.md) — checked into repo (portfolio artifact) | ✅ |
+
+**Baseline vs. hybrid on the Aurora question set (K=5, n=12):**
+
+| Strategy | hit@K | MRR | mean top-1 sim |
+|---|---|---|---|
+| dense-only | 0.917 | 0.861 | 0.537 |
+| **hybrid-rrf** | **1.000** | **0.944** | 0.531 |
+
+Dense-only missed q10 (AuroraCare+) because the question mentions "cost" and "much" which aren't in the target chunk — cosine similarity spread thin across chunks about warranty coverage in general. Hybrid recovered it via lexical match on "auroracare+" itself.
+
+**Key implementation notes for future work:**
+- Sparse query construction: `websearch_to_tsquery` AND-joins terms, which misses too many hits. `hybrid.ts::buildTsQuery` sanitizes to `[a-z0-9+-\s]`, drops 1-char tokens, escapes leading `-` and trailing `+`, then OR-joins for `to_tsquery`. That fix alone took hit@5 from 0.917 to 1.000.
+- RRF constant k=60 (Cormack et al. 2009 default). No tuning across corpora.
+- Over-fetch factor 3 — each retriever pulls `k * 3` candidates so fusion has room to promote items appearing in both lists.
+- Hybrid returns dense cosine similarity when available; sparse-only hits get `similarity=0` (report-only, no ranking impact).
+
+**Remaining eval opportunities (not urgent):**
+- q12 (encryption) stays at #3 in both strategies. Root cause is chunking granularity — the "required for enterprise accounts" phrase sits inside a longer chunk whose semantic centroid is Setup steps. Fix would be smaller chunks or sentence-window chunking. Not pursued because MRR is already 0.944.
+- Optional cross-encoder rerank stage (Cohere Rerank / OpenAI reranker) — would likely push q12 to #1. Adds external API dep + latency. Defer to Phase 5.
 
 ### Phase 5 — Polish + ship (not started; visual polish already well ahead of schedule)
 - Persistence for chat history (Conversation + Message Prisma models) — currently session-only
@@ -253,4 +278,4 @@ This handoff doc is for **you** (the human) to skim, not for Claude.
 
 ## Suggested first message when resuming
 
-> Resume from handoff.md. Phases 1, 2, and 3 are done and verified end-to-end. Start Phase 4 — hybrid search + re-ranking + eval. First step: sketch the eval harness (question → expected-source pairs → hit@K + MRR) so we have a baseline metric BEFORE adding hybrid search. Then implement `src/lib/rag/hybrid.ts` (dense + tsvector BM25 with reciprocal rank fusion) and compare against baseline.
+> Resume from handoff.md. Phases 1-4 are done and verified. Start Phase 5 — polish + ship. Priorities: (1) persist chat history via new `Conversation` + `Message` Prisma models, (2) rotate the compromised credentials, (3) swap in-memory rate limiter for Upstash, (4) deploy to Vercel. Consider an optional cross-encoder rerank stage if time permits — see Phase 4 §"Remaining eval opportunities".

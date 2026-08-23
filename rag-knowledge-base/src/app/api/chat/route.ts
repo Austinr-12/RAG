@@ -10,7 +10,11 @@ import {
   CHAT_LIMITS,
   checkRateLimit,
 } from "@/lib/security/rateLimit";
-import { retrieve } from "@/lib/rag/retrieve";
+// Why: hybrid retrieval (dense + sparse RRF) measurably beats dense-only on
+// the Aurora eval — hit@5 0.917 → 1.000, MRR 0.861 → 0.944. See
+// scripts/eval.ts and eval-results.md. `retrieve` is kept in the codebase as
+// the baseline strategy for eval comparison but production chat uses hybrid.
+import { hybridRetrieve as retrieve } from "@/lib/rag/hybrid";
 import {
   CHAT_MODEL,
   SYSTEM_PROMPT,
