@@ -30,7 +30,7 @@ export async function GET() {
   try {
     const user = await requireUser();
     if (!user) return unauthenticated();
-    const gate = checkRateLimit(
+    const gate = await checkRateLimit(
       BUCKETS.readMinute,
       user.id,
       READ_LIMITS.perMinute,
@@ -67,7 +67,7 @@ export async function DELETE(request: Request) {
   try {
     const user = await requireUser();
     if (!user) return unauthenticated();
-    const gate = checkRateLimit(
+    const gate = await checkRateLimit(
       BUCKETS.readMinute,
       user.id,
       READ_LIMITS.perMinute,

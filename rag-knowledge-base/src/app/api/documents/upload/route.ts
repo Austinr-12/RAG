@@ -35,7 +35,7 @@ export async function POST(request: Request) {
     throw err;
   }
 
-  const minuteCheck = checkRateLimit(
+  const minuteCheck = await checkRateLimit(
     BUCKETS.uploadMinute,
     user.id,
     UPLOAD_LIMITS.perMinute,
@@ -44,7 +44,7 @@ export async function POST(request: Request) {
   if (!minuteCheck.ok) {
     return tooMany("Too many uploads. Slow down.", minuteCheck.retryAfterSec);
   }
-  const dayCheck = checkRateLimit(
+  const dayCheck = await checkRateLimit(
     BUCKETS.uploadDay,
     user.id,
     UPLOAD_LIMITS.perDay,

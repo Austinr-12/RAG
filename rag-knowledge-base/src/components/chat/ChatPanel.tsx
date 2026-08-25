@@ -1,19 +1,48 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { useChat } from "@ai-sdk/react";
+import { useRouter } from "next/navigation";
+import { useChat, type UseChatOptions } from "@ai-sdk/react";
+import type { UIMessage } from "ai";
 import { MessageBubble } from "./MessageBubble";
 
-export function ChatPanel() {
-  // Why: v6 useChat no longer returns input/handleInputChange/handleSubmit —
-  // the caller manages input state and calls sendMessage({ text }) explicitly.
-  const { messages, sendMessage, status, error, stop } = useChat();
+// Why: initialMessages come from the server as plain {role, content, id}.
+// v7 UIMessage requires a `parts` array — hydrate them into TextUIParts here.
+type StoredMsg = { id: string; role: "user" | "assistant" | "system"; content: string };
+
+type Props = {
+  conversationId: string;
+  initialMessages: StoredMsg[];
+};
+
+export function ChatPanel({ conversationId, initialMessages }: Props) {
+  const router = useRouter();
+  const [creatingNew, setCreatingNew] = useState(false);
+
+  const hydrated: UIMessage[] = initialMessages.map((m) => ({
+    id: m.id,
+    role: m.role,
+    parts: [{ type: "text", text: m.content }],
+  }));
+
+  // Why: keying useChat by conversationId means the hook fully resets when we
+  // switch to a new conversation (via "New chat" below). `messages` is the
+  // initial-state option in v7 (not `initialMessages`).
+  const chatOptions: UseChatOptions<UIMessage> = {
+    id: conversationId,
+    messages: hydrated,
+    // Why: sendMessage POSTs to /api/chat with the message list. Adding
+    // conversationId here means the server can persist to the right thread.
+    // The body prop is a top-level ChatInit option in v7.
+    body: { conversationId },
+  } as UseChatOptions<UIMessage>;
+
+  const { messages, sendMessage, status, error, stop } = useChat(chatOptions);
 
   const [input, setInput] = useState("");
   const scrollRef = useRef<HTMLDivElement>(null);
   const busy = status === "submitted" || status === "streaming";
 
-  // Auto-scroll to bottom on new messages / streaming tokens.
   useEffect(() => {
     scrollRef.current?.scrollTo({
       top: scrollRef.current.scrollHeight,
@@ -29,8 +58,38 @@ export function ChatPanel() {
     await sendMessage({ text });
   }
 
+  async function newChat() {
+    if (creatingNew) return;
+    setCreatingNew(true);
+    try {
+      const res = await fetch("/api/conversations", { method: "POST" });
+      if (!res.ok) throw new Error(`Create failed (${res.status})`);
+      // Why: server-render the new empty conversation so message state resets
+      // cleanly. router.refresh() re-fetches the server component's data.
+      router.refresh();
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setCreatingNew(false);
+    }
+  }
+
   return (
     <div className="flex h-[calc(100vh-3.5rem-6rem)] flex-col rounded-2xl border border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-950">
+      <div className="flex items-center justify-between border-b border-zinc-200 px-4 py-2 dark:border-zinc-800">
+        <span className="text-xs uppercase tracking-wide text-zinc-500">
+          {messages.length === 0 ? "New conversation" : `${messages.length} messages`}
+        </span>
+        <button
+          type="button"
+          onClick={() => void newChat()}
+          disabled={creatingNew || messages.length === 0}
+          className="rounded-full px-3 py-1 text-xs font-medium text-zinc-700 transition hover:bg-zinc-100 disabled:opacity-40 dark:text-zinc-300 dark:hover:bg-zinc-800"
+        >
+          {creatingNew ? "Creating…" : "New chat"}
+        </button>
+      </div>
+
       <div
         ref={scrollRef}
         className="flex-1 space-y-4 overflow-y-auto px-4 py-6 sm:px-6"

@@ -20,6 +20,7 @@ import {
   SYSTEM_PROMPT,
   buildRetrievalPrompt,
 } from "@/lib/rag/prompt";
+import { appendMessage } from "@/lib/chat/persistence";
 
 // Why: OpenAI streaming works fine on the Node runtime and matches the rest of
 // the app. Edge would trim a bit of latency but complicates pdf-parse in ingest,
@@ -39,7 +40,7 @@ export async function POST(request: Request) {
     throw err;
   }
 
-  const minuteCheck = checkRateLimit(
+  const minuteCheck = await checkRateLimit(
     BUCKETS.chatMinute,
     user.id,
     CHAT_LIMITS.perMinute,
@@ -47,7 +48,7 @@ export async function POST(request: Request) {
   );
   if (!minuteCheck.ok) return tooMany("Too many messages. Slow down.", minuteCheck.retryAfterSec);
 
-  const dayCheck = checkRateLimit(
+  const dayCheck = await checkRateLimit(
     BUCKETS.chatDay,
     user.id,
     CHAT_LIMITS.perDay,
@@ -55,9 +56,12 @@ export async function POST(request: Request) {
   );
   if (!dayCheck.ok) return tooMany("Daily message limit reached.", dayCheck.retryAfterSec);
 
-  let body: { messages?: UIMessage[] };
+  let body: { messages?: UIMessage[]; conversationId?: string };
   try {
-    body = (await request.json()) as { messages?: UIMessage[] };
+    body = (await request.json()) as {
+      messages?: UIMessage[];
+      conversationId?: string;
+    };
   } catch {
     return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
   }
@@ -65,6 +69,13 @@ export async function POST(request: Request) {
   const messages = body.messages ?? [];
   if (!Array.isArray(messages) || messages.length === 0) {
     return NextResponse.json({ error: "No messages provided" }, { status: 400 });
+  }
+
+  // Why: conversationId is required so we can persist turns to the right thread.
+  // Validate shape early so scanners spamming garbage don't hit Prisma.
+  const conversationId = body.conversationId;
+  if (!conversationId || !/^[a-z0-9]{10,64}$/.test(conversationId)) {
+    return NextResponse.json({ error: "Missing conversationId" }, { status: 400 });
   }
 
   // Why: the retrieval query is the latest user message. Assistant/system messages
@@ -103,10 +114,36 @@ export async function POST(request: Request) {
     // file parts before sending). Await it before passing to streamText.
     const modelMessages = await convertToModelMessages(augmentedMessages);
 
+    // Why: persist the user turn BEFORE streaming so it survives even if the
+    // model call fails halfway. This is cheap (~1 DB round-trip) and prevents
+    // the ugly case where an answer half-streams and then vanishes with its
+    // prompt on refresh.
+    await appendMessage({
+      conversationId,
+      userId: user.id,
+      role: "user",
+      content: question,
+    });
+
     const result = streamText({
       model: openai(CHAT_MODEL),
       system: SYSTEM_PROMPT,
       messages: modelMessages,
+      // Why: onFinish fires once when the stream completes cleanly. Persist
+      // the assistant reply here so the full turn is durable.
+      onFinish: async ({ text }) => {
+        try {
+          await appendMessage({
+            conversationId,
+            userId: user.id,
+            role: "assistant",
+            content: text,
+          });
+        } catch (err) {
+          // Non-fatal — the client already got the stream. Log for debugging.
+          console.error("[chat] failed to persist assistant reply", err);
+        }
+      },
     });
 
     return result.toUIMessageStreamResponse();
