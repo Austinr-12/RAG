@@ -33,7 +33,7 @@ export default function Home() {
             href="/sign-up"
             className="inline-flex h-11 items-center justify-center rounded-full bg-zinc-900 px-6 text-sm font-medium text-white shadow-sm transition hover:bg-zinc-800 hover:shadow dark:bg-white dark:text-zinc-900 dark:hover:bg-zinc-200"
           >
-            Get started — it's free
+            Get started — it&apos;s free
           </Link>
           <Link
             href="/sign-in"
