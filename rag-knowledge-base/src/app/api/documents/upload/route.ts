@@ -1,6 +1,10 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { ingest, ChunkLimitExceededError } from "@/lib/rag/ingest";
+import {
+  ingest,
+  ChunkLimitExceededError,
+  DocumentQuotaExceededError,
+} from "@/lib/rag/ingest";
 import { requireUser, unauthenticated, tooMany } from "@/lib/api/guards";
 import {
   BUCKETS,
@@ -81,12 +85,19 @@ export async function POST(request: Request) {
       filename: file.name,
       mimeType: mime,
       userId: user.id,
+      // Why: re-checked inside the insert transaction — the count above is a
+      // fast-path reject before embedding spend, but parallel uploads could
+      // race past it.
+      maxDocuments: UPLOAD_LIMITS.maxDocumentsPerUser,
     });
 
     return NextResponse.json(result, { status: 201 });
   } catch (err) {
     if (err instanceof ChunkLimitExceededError) {
       return NextResponse.json({ error: err.message }, { status: 413 });
+    }
+    if (err instanceof DocumentQuotaExceededError) {
+      return NextResponse.json({ error: err.message }, { status: 409 });
     }
     // Why: raw err.message can leak SQL text, filesystem paths, or OpenAI billing
     // errors. Log details server-side, return a generic message to the client.

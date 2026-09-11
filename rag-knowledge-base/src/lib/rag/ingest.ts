@@ -10,6 +10,14 @@ export type IngestInput = {
   filename: string;
   mimeType: string;
   userId: string;
+  /**
+   * When set, the document-count quota is re-checked inside the insert
+   * transaction. The route's pre-check rejects cheaply before embedding
+   * spend; this one closes most of the count-then-insert race window
+   * (soft cap — parallel transactions can still slip past under READ
+   * COMMITTED, but the upload rate limit bounds that to a handful).
+   */
+  maxDocuments?: number;
 };
 
 export type IngestResult = { documentId: string; chunkCount: number };
@@ -22,6 +30,16 @@ export class ChunkLimitExceededError extends Error {
       `File would produce ${chunkCount} chunks (limit ${limit}). Split the file into smaller pieces.`,
     );
     this.name = "ChunkLimitExceededError";
+  }
+}
+
+// Why: same pattern for the document quota so the route maps it to HTTP 409.
+export class DocumentQuotaExceededError extends Error {
+  constructor(limit: number) {
+    super(
+      `Document quota reached (${limit}). Delete some before uploading more.`,
+    );
+    this.name = "DocumentQuotaExceededError";
   }
 }
 
@@ -52,6 +70,14 @@ export async function ingest(input: IngestInput): Promise<IngestResult> {
   // chunk insert goes through raw SQL. Wrapping the Document create + Chunk insert in
   // one transaction prevents an orphan Document if the chunk insert fails.
   const documentId = await prisma.$transaction(async (tx) => {
+    if (input.maxDocuments !== undefined) {
+      const count = await tx.document.count({
+        where: { userId: input.userId },
+      });
+      if (count >= input.maxDocuments) {
+        throw new DocumentQuotaExceededError(input.maxDocuments);
+      }
+    }
     const doc = await tx.document.create({
       data: { name: filename, userId: input.userId },
       select: { id: true },

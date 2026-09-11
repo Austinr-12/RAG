@@ -1,5 +1,11 @@
 import { NextResponse } from "next/server";
-import { streamText, convertToModelMessages, type UIMessage } from "ai";
+import {
+  streamText,
+  convertToModelMessages,
+  createUIMessageStream,
+  createUIMessageStreamResponse,
+  type UIMessage,
+} from "ai";
 import { openai } from "@ai-sdk/openai";
 import { requireUser, unauthenticated, tooMany, ID_RE } from "@/lib/api/guards";
 import {
@@ -15,6 +21,7 @@ import { hybridRetrieve as retrieve } from "@/lib/rag/hybrid";
 import {
   CHAT_MODEL,
   SYSTEM_PROMPT,
+  NO_SOURCES_REPLY,
   buildRetrievalPrompt,
 } from "@/lib/rag/prompt";
 import { appendMessage } from "@/lib/chat/persistence";
@@ -94,6 +101,34 @@ export async function POST(request: Request) {
 
   try {
     const chunks = await retrieve(user.id, question);
+
+    // Why: a brand-new conversation with nothing retrievable (typically a user
+    // with no matching documents) has exactly one correct answer — the canned
+    // "not in your documents" reply. Skip the model call and stream it
+    // directly: saves a full LLM round-trip per empty first turn. Multi-turn
+    // conversations still go to the model so follow-ups can use history.
+    if (chunks.length === 0 && messages.length === 1) {
+      await appendMessage({
+        conversationId,
+        userId: user.id,
+        role: "user",
+        content: question,
+      });
+      await appendMessage({
+        conversationId,
+        userId: user.id,
+        role: "assistant",
+        content: NO_SOURCES_REPLY,
+      });
+      const stream = createUIMessageStream({
+        execute: ({ writer }) => {
+          writer.write({ type: "text-start", id: "canned" });
+          writer.write({ type: "text-delta", id: "canned", delta: NO_SOURCES_REPLY });
+          writer.write({ type: "text-end", id: "canned" });
+        },
+      });
+      return createUIMessageStreamResponse({ stream });
+    }
 
     // Why: replace the latest user turn's raw text with the retrieval-augmented
     // prompt so the model sees the sources. The rest of the history stays intact

@@ -99,9 +99,25 @@ async function impl(...args: Parameters<RateLimiterFn>): Promise<RateLimitResult
 type WindowState = { count: number; resetAt: number };
 const buckets = new Map<string, WindowState>();
 
+// Why: expired windows used to accumulate forever — a slow leak keyed by
+// bucket×user that only a restart cleared. Sweep opportunistically, at most
+// once a minute, so lookups stay O(1) and the map stays bounded by the set
+// of users active in the last window.
+const SWEEP_INTERVAL_MS = 60_000;
+let nextSweepAt = 0;
+
+function sweepExpired(now: number): void {
+  if (now < nextSweepAt) return;
+  nextSweepAt = now + SWEEP_INTERVAL_MS;
+  for (const [key, state] of buckets) {
+    if (state.resetAt <= now) buckets.delete(key);
+  }
+}
+
 const inMemoryLimiter: RateLimiterFn = async (bucket, id, limit, windowMs) => {
   const key = `${bucket}:${id}`;
   const now = Date.now();
+  sweepExpired(now);
   const state = buckets.get(key);
 
   if (!state || state.resetAt <= now) {
