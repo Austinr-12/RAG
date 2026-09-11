@@ -1,10 +1,7 @@
 import { NextResponse } from "next/server";
 import { streamText, convertToModelMessages, type UIMessage } from "ai";
 import { openai } from "@ai-sdk/openai";
-import {
-  getOrCreateUser,
-  UnauthenticatedError,
-} from "@/lib/auth/getOrCreateUser";
+import { requireUser, unauthenticated, tooMany, ID_RE } from "@/lib/api/guards";
 import {
   BUCKETS,
   CHAT_LIMITS,
@@ -21,6 +18,8 @@ import {
   buildRetrievalPrompt,
 } from "@/lib/rag/prompt";
 import { appendMessage } from "@/lib/chat/persistence";
+import { sanitizeChatMessages } from "@/lib/chat/sanitize";
+import { uiMessageText } from "@/lib/chat/messageText";
 
 // Why: OpenAI streaming works fine on the Node runtime and matches the rest of
 // the app. Edge would trim a bit of latency but complicates pdf-parse in ingest,
@@ -30,15 +29,8 @@ export const runtime = "nodejs";
 export const maxDuration = 60;
 
 export async function POST(request: Request) {
-  let user: { id: string; clerkId: string };
-  try {
-    user = await getOrCreateUser();
-  } catch (err) {
-    if (err instanceof UnauthenticatedError) {
-      return NextResponse.json({ error: "Unauthenticated" }, { status: 401 });
-    }
-    throw err;
-  }
+  const user = await requireUser();
+  if (!user) return unauthenticated();
 
   const minuteCheck = await checkRateLimit(
     BUCKETS.chatMinute,
@@ -46,7 +38,9 @@ export async function POST(request: Request) {
     CHAT_LIMITS.perMinute,
     60_000,
   );
-  if (!minuteCheck.ok) return tooMany("Too many messages. Slow down.", minuteCheck.retryAfterSec);
+  if (!minuteCheck.ok) {
+    return tooMany(minuteCheck.retryAfterSec, "Too many messages. Slow down.");
+  }
 
   const dayCheck = await checkRateLimit(
     BUCKETS.chatDay,
@@ -54,34 +48,39 @@ export async function POST(request: Request) {
     CHAT_LIMITS.perDay,
     24 * 60 * 60_000,
   );
-  if (!dayCheck.ok) return tooMany("Daily message limit reached.", dayCheck.retryAfterSec);
+  if (!dayCheck.ok) {
+    return tooMany(dayCheck.retryAfterSec, "Daily message limit reached.");
+  }
 
-  let body: { messages?: UIMessage[]; conversationId?: string };
+  let body: { messages?: unknown; conversationId?: unknown };
   try {
     body = (await request.json()) as {
-      messages?: UIMessage[];
-      conversationId?: string;
+      messages?: unknown;
+      conversationId?: unknown;
     };
   } catch {
     return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
   }
 
-  const messages = body.messages ?? [];
-  if (!Array.isArray(messages) || messages.length === 0) {
+  // Why: the history is client-controlled. Sanitizing bounds message count and
+  // total size (token-cost cap) and drops client-supplied `system` roles so
+  // the only system prompt the model sees is ours.
+  const messages = sanitizeChatMessages(body.messages);
+  if (messages.length === 0) {
     return NextResponse.json({ error: "No messages provided" }, { status: 400 });
   }
 
   // Why: conversationId is required so we can persist turns to the right thread.
   // Validate shape early so scanners spamming garbage don't hit Prisma.
   const conversationId = body.conversationId;
-  if (!conversationId || !/^[a-z0-9]{10,64}$/.test(conversationId)) {
+  if (typeof conversationId !== "string" || !ID_RE.test(conversationId)) {
     return NextResponse.json({ error: "Missing conversationId" }, { status: 400 });
   }
 
-  // Why: the retrieval query is the latest user message. Assistant/system messages
+  // Why: the retrieval query is the latest user message. Assistant messages
   // don't drive new searches; the model uses the full turn history for context.
   const latest = [...messages].reverse().find((m) => m.role === "user");
-  const question = latest ? uiMessageToText(latest) : "";
+  const question = latest ? uiMessageText(latest) : "";
 
   if (!question.trim()) {
     return NextResponse.json({ error: "No user question in messages" }, { status: 400 });
@@ -151,18 +150,4 @@ export async function POST(request: Request) {
     console.error("[chat] failed", err);
     return NextResponse.json({ error: "Chat failed" }, { status: 500 });
   }
-}
-
-function uiMessageToText(m: UIMessage): string {
-  return m.parts
-    .filter((p): p is { type: "text"; text: string } => p.type === "text")
-    .map((p) => p.text)
-    .join("");
-}
-
-function tooMany(message: string, retryAfterSec: number): NextResponse {
-  return NextResponse.json(
-    { error: message, retryAfterSec },
-    { status: 429, headers: { "Retry-After": String(retryAfterSec) } },
-  );
 }

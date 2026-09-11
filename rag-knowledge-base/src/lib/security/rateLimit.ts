@@ -31,12 +31,20 @@ export const CHAT_LIMITS = {
   maxMessageChars: 2000,
 } as const;
 
+// Why: conversation creation was the one write path with no cap — a hostile
+// authed user could create unbounded rows. Mirrors the documents quota model.
+export const CONVERSATION_LIMITS = {
+  createPerMinute: 10,
+  maxPerUser: 500,
+} as const;
+
 export const BUCKETS = {
   uploadMinute: "upload:min",
   uploadDay: "upload:day",
   readMinute: "read:min",
   chatMinute: "chat:min",
   chatDay: "chat:day",
+  conversationCreateMinute: "conv:min",
 } as const;
 
 export type RateLimitResult =

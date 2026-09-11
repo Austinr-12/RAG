@@ -1,27 +1,13 @@
 import { NextResponse } from "next/server";
+import { requireUser, unauthenticated, tooMany, ID_RE } from "@/lib/api/guards";
 import {
-  getOrCreateUser,
-  UnauthenticatedError,
-} from "@/lib/auth/getOrCreateUser";
+  BUCKETS,
+  READ_LIMITS,
+  checkRateLimit,
+} from "@/lib/security/rateLimit";
 import { deleteConversation, getConversation } from "@/lib/chat/persistence";
 
 export const runtime = "nodejs";
-
-async function requireUser() {
-  try {
-    return await getOrCreateUser();
-  } catch (err) {
-    if (err instanceof UnauthenticatedError) return null;
-    throw err;
-  }
-}
-
-const unauthenticated = () =>
-  NextResponse.json({ error: "Unauthenticated" }, { status: 401 });
-
-// Why: cuid ids are ~25 chars of [a-z0-9]. Reject obvious garbage before
-// hitting the DB so scanners spamming random ids don't generate query load.
-const ID_RE = /^[a-z0-9]{10,64}$/;
 
 // Next 16 route context: params is a Promise that must be awaited.
 type Ctx = { params: Promise<{ id: string }> };
@@ -30,6 +16,14 @@ export async function GET(_request: Request, ctx: Ctx) {
   try {
     const user = await requireUser();
     if (!user) return unauthenticated();
+    const gate = await checkRateLimit(
+      BUCKETS.readMinute,
+      user.id,
+      READ_LIMITS.perMinute,
+      60_000,
+    );
+    if (!gate.ok) return tooMany(gate.retryAfterSec);
+
     const { id } = await ctx.params;
     if (!ID_RE.test(id)) {
       return NextResponse.json({ error: "Invalid id" }, { status: 400 });
@@ -58,6 +52,14 @@ export async function DELETE(_request: Request, ctx: Ctx) {
   try {
     const user = await requireUser();
     if (!user) return unauthenticated();
+    const gate = await checkRateLimit(
+      BUCKETS.readMinute,
+      user.id,
+      READ_LIMITS.perMinute,
+      60_000,
+    );
+    if (!gate.ok) return tooMany(gate.retryAfterSec);
+
     const { id } = await ctx.params;
     if (!ID_RE.test(id)) {
       return NextResponse.json({ error: "Invalid id" }, { status: 400 });

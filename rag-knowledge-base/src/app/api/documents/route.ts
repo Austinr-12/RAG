@@ -1,9 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import {
-  getOrCreateUser,
-  UnauthenticatedError,
-} from "@/lib/auth/getOrCreateUser";
+import { requireUser, unauthenticated, tooMany, ID_RE } from "@/lib/api/guards";
 import {
   BUCKETS,
   READ_LIMITS,
@@ -11,20 +8,6 @@ import {
 } from "@/lib/security/rateLimit";
 
 export const runtime = "nodejs";
-
-async function requireUser() {
-  try {
-    return await getOrCreateUser();
-  } catch (err) {
-    if (err instanceof UnauthenticatedError) return null;
-    throw err;
-  }
-}
-
-// Why: fresh response per call — NextResponse bodies are streams and can't be
-// safely shared across concurrent requests.
-const unauthenticated = () =>
-  NextResponse.json({ error: "Unauthenticated" }, { status: 401 });
 
 export async function GET() {
   try {
@@ -76,9 +59,7 @@ export async function DELETE(request: Request) {
     if (!gate.ok) return tooMany(gate.retryAfterSec);
 
     const id = new URL(request.url).searchParams.get("id");
-    // Why: cuid ids are ~25 chars of [a-z0-9]. Reject obvious garbage before hitting
-    // the DB so scanners spamming random ids don't generate query load.
-    if (!id || !/^[a-z0-9]{10,64}$/.test(id)) {
+    if (!id || !ID_RE.test(id)) {
       return NextResponse.json({ error: "Invalid id" }, { status: 400 });
     }
     // Why: deleteMany scoped to userId prevents cross-user deletion in one query.
@@ -94,11 +75,4 @@ export async function DELETE(request: Request) {
     console.error("[documents:DELETE] failed", err);
     return NextResponse.json({ error: "Delete failed" }, { status: 500 });
   }
-}
-
-function tooMany(retryAfterSec: number): NextResponse {
-  return NextResponse.json(
-    { error: "Too many requests", retryAfterSec },
-    { status: 429, headers: { "Retry-After": String(retryAfterSec) } },
-  );
 }

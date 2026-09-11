@@ -1,10 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { ingest, ChunkLimitExceededError } from "@/lib/rag/ingest";
-import {
-  getOrCreateUser,
-  UnauthenticatedError,
-} from "@/lib/auth/getOrCreateUser";
+import { requireUser, unauthenticated, tooMany } from "@/lib/api/guards";
 import {
   BUCKETS,
   UPLOAD_LIMITS,
@@ -25,15 +22,8 @@ const ALLOWED_MIME = new Set([
 ]);
 
 export async function POST(request: Request) {
-  let user: { id: string; clerkId: string };
-  try {
-    user = await getOrCreateUser();
-  } catch (err) {
-    if (err instanceof UnauthenticatedError) {
-      return NextResponse.json({ error: "Unauthenticated" }, { status: 401 });
-    }
-    throw err;
-  }
+  const user = await requireUser();
+  if (!user) return unauthenticated();
 
   const minuteCheck = await checkRateLimit(
     BUCKETS.uploadMinute,
@@ -42,7 +32,7 @@ export async function POST(request: Request) {
     60_000,
   );
   if (!minuteCheck.ok) {
-    return tooMany("Too many uploads. Slow down.", minuteCheck.retryAfterSec);
+    return tooMany(minuteCheck.retryAfterSec, "Too many uploads. Slow down.");
   }
   const dayCheck = await checkRateLimit(
     BUCKETS.uploadDay,
@@ -51,7 +41,7 @@ export async function POST(request: Request) {
     24 * 60 * 60_000,
   );
   if (!dayCheck.ok) {
-    return tooMany("Daily upload limit reached.", dayCheck.retryAfterSec);
+    return tooMany(dayCheck.retryAfterSec, "Daily upload limit reached.");
   }
 
   const docCount = await prisma.document.count({ where: { userId: user.id } });
@@ -103,13 +93,6 @@ export async function POST(request: Request) {
     console.error("[upload] failed", err);
     return NextResponse.json({ error: "Upload failed" }, { status: 500 });
   }
-}
-
-function tooMany(message: string, retryAfterSec: number): NextResponse {
-  return NextResponse.json(
-    { error: message, retryAfterSec },
-    { status: 429, headers: { "Retry-After": String(retryAfterSec) } },
-  );
 }
 
 function inferMime(name: string): string {

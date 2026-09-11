@@ -1,19 +1,11 @@
 import type { UIMessage } from "ai";
-
-// Why: extract plain text from the parts array. In v6 a UIMessage's content
-// lives in typed parts (text, reasoning, tool-call, etc); we only render text.
-function messageText(m: UIMessage): string {
-  return m.parts
-    .filter((p): p is { type: "text"; text: string } => p.type === "text")
-    .map((p) => p.text)
-    .join("");
-}
+import { uiMessageText } from "@/lib/chat/messageText";
 
 type Props = { message: UIMessage };
 
 export function MessageBubble({ message }: Props) {
   const isUser = message.role === "user";
-  const text = messageText(message);
+  const text = uiMessageText(message);
 
   return (
     <div
