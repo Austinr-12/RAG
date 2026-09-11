@@ -4,17 +4,28 @@
 > considered compromised. This file lists every secret this project uses, where
 > it lives, where to rotate it, and how to plug the new value back in.
 
+## Rotation status
+
+| Secret | Status |
+|---|---|
+| `OPENAI_API_KEY` | ✅ **Rotated 2026-09-10.** New key verified working (models endpoint 200). Heads-up: the account's API credit balance was empty at last check — embeddings/chat/eval fail with `insufficient_quota` until credits are added. |
+| `CLERK_SECRET_KEY` | ✅ **Rotated 2026-09-10.** New key verified working (Clerk API 200). |
+| `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` | Unchanged — doesn't auto-rotate and ships to browsers by design. |
+| `DATABASE_URL` / `DIRECT_URL` password | 🔴 **Still the original transcript-exposed password — rotate this one.** Follow §3 below; a Supabase Postgres upgrade is a convenient moment to do it. |
+
 ## Why this matters
 
 During setup, the DB password, OpenAI key, and Clerk secret all appeared in chat
-transcripts. Treat all four production secrets below as **compromised** and
-rotate them before:
+transcripts. Treat any secret that has appeared in a transcript as
+**compromised** until the status table above says it was rotated. Rotate before:
 
 - Sharing the repository publicly
 - Deploying to any URL that other people can reach
 - Storing any real user data
 
 Development against these keys locally is fine — the risk is exposure, not use.
+When you rotate a key, update the status table above (date + verified) so
+future-you doesn't have to guess.
 
 ---
 
