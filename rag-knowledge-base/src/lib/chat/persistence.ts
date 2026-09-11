@@ -143,7 +143,8 @@ export async function appendMessage(params: {
   ]);
 }
 
-function deriveTitle(text: string): string {
+// Exported for unit tests.
+export function deriveTitle(text: string): string {
   const oneLine = text.replace(/\s+/g, " ").trim();
   if (oneLine.length <= MAX_TITLE_LENGTH) return oneLine;
   return oneLine.slice(0, MAX_TITLE_LENGTH - 1).trimEnd() + "…";

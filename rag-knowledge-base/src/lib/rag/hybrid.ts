@@ -55,7 +55,7 @@ export async function hybridRetrieve(
   }));
 }
 
-type Row = {
+export type Row = {
   chunkId: string;
   content: string;
   index: number;
@@ -128,7 +128,8 @@ async function sparseCandidates(
 // invalid tsquery syntax. Drop 1-char tokens (mostly stop-word residue and
 // punctuation artifacts). No stop-word filtering here — Postgres handles that
 // via the 'english' dictionary and treats stop-words as valid but zero-weight.
-function buildTsQuery(query: string): string {
+// Exported for unit tests (injection-safety cases).
+export function buildTsQuery(query: string): string {
   const tokens = query
     .toLowerCase()
     .replace(/[^a-z0-9+\-\s]/g, " ")
@@ -141,7 +142,8 @@ function buildTsQuery(query: string): string {
   return tokens.join(" | ");
 }
 
-function reciprocalRankFusion(lists: Row[][]): Row[] {
+// Exported for unit tests.
+export function reciprocalRankFusion(lists: Row[][]): Row[] {
   const scores = new Map<string, { row: Row; score: number }>();
   for (const list of lists) {
     list.forEach((row, i) => {
