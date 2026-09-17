@@ -6,7 +6,6 @@ import {
   createUIMessageStreamResponse,
   type UIMessage,
 } from "ai";
-import { openai } from "@ai-sdk/openai";
 import { requireUser, unauthenticated, tooMany, ID_RE } from "@/lib/api/guards";
 import {
   BUCKETS,
@@ -19,17 +18,23 @@ import {
 // the baseline strategy for eval comparison but production chat uses hybrid.
 import { hybridRetrieve as retrieve } from "@/lib/rag/hybrid";
 import {
-  CHAT_MODEL,
+  CHAT_MAX_OUTPUT_TOKENS,
+  CHAT_TEMPERATURE,
   SYSTEM_PROMPT,
   NO_SOURCES_REPLY,
   buildRetrievalPrompt,
 } from "@/lib/rag/prompt";
+import {
+  getChatModel,
+  resolveChatModelConfig,
+  type ChatModelConfig,
+} from "@/lib/rag/model";
 import { appendMessage } from "@/lib/chat/persistence";
 import { sanitizeChatMessages } from "@/lib/chat/sanitize";
 import { uiMessageText } from "@/lib/chat/messageText";
 
-// Why: OpenAI streaming works fine on the Node runtime and matches the rest of
-// the app. Edge would trim a bit of latency but complicates pdf-parse in ingest,
+// Why: streaming works fine on the Node runtime and matches the rest of the
+// app. Edge would trim a bit of latency but complicates pdf-parse in ingest,
 // which we already ruled out. Stay consistent across routes.
 export const runtime = "nodejs";
 // Why: model generation can take up to ~30s for a long answer + retrieval overhead.
@@ -69,10 +74,25 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
   }
 
+  // Why: which model answers (OpenAI or a self-hosted OpenAI-compatible
+  // server) is an env decision — see src/lib/rag/model.ts. Resolve it before
+  // sanitizing because a small-context model tightens the history budget. A
+  // bad value is an operator error: log the exact reason, stay generic to the
+  // client.
+  let modelConfig: ChatModelConfig;
+  try {
+    modelConfig = resolveChatModelConfig();
+  } catch (err) {
+    console.error("[chat] invalid chat model configuration", err);
+    return NextResponse.json({ error: "Chat failed" }, { status: 500 });
+  }
+
   // Why: the history is client-controlled. Sanitizing bounds message count and
   // total size (token-cost cap) and drops client-supplied `system` roles so
   // the only system prompt the model sees is ours.
-  const messages = sanitizeChatMessages(body.messages);
+  const messages = sanitizeChatMessages(body.messages, {
+    maxHistoryChars: modelConfig.maxHistoryChars,
+  });
   if (messages.length === 0) {
     return NextResponse.json({ error: "No messages provided" }, { status: 400 });
   }
@@ -160,9 +180,13 @@ export async function POST(request: Request) {
     });
 
     const result = streamText({
-      model: openai(CHAT_MODEL),
+      model: getChatModel(modelConfig),
       system: SYSTEM_PROMPT,
       messages: modelMessages,
+      // Why: pinned so every provider — and every offline eval — samples the
+      // same way. See the constants in src/lib/rag/prompt.ts.
+      temperature: CHAT_TEMPERATURE,
+      maxOutputTokens: CHAT_MAX_OUTPUT_TOKENS,
       // Why: onFinish fires once when the stream completes cleanly. Persist
       // the assistant reply here so the full turn is durable.
       onFinish: async ({ text }) => {

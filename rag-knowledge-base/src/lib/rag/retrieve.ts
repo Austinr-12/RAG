@@ -1,10 +1,10 @@
 import { prisma } from "@/lib/prisma";
 import { embed } from "@/lib/rag/embeddings";
+import { RETRIEVE_DEFAULT_K } from "@/lib/rag/retrievalConfig";
 
-// Why: retrieval defaults. K=5 is a common sweet spot for RAG — enough context
-// to answer follow-up-style questions, few enough that the LLM prompt stays
-// under budget and doesn't dilute focus. Tuneable via the opts argument.
-export const RETRIEVE_DEFAULT_K = 5;
+// Re-exported so existing call sites keep working; the value itself lives in
+// the dependency-free retrievalConfig module. Tuneable via the opts argument.
+export { RETRIEVE_DEFAULT_K };
 
 // Why: OpenAI embeddings are unit-normalized, so cosine distance from pgvector's
 // `<=>` operator lives in [0, 2] and similarity = 1 - distance sits in [-1, 1].

@@ -13,6 +13,16 @@ export const MAX_HISTORY_MESSAGES = 40;
 /** Total character budget across all kept messages (~16k tokens). */
 export const MAX_HISTORY_CHARS = 64_000;
 
+export type SanitizeOptions = {
+  /**
+   * Tighter character budget for models with a small context window (a
+   * self-hosted 8k-context model can't take the 16k tokens gpt-4o-mini can).
+   * It can only LOWER the budget: MAX_HISTORY_CHARS is a security bound on
+   * token spend, so larger or invalid values fall back to it.
+   */
+  maxHistoryChars?: number;
+};
+
 /**
  * Normalize an untrusted `messages` payload into a bounded, text-only
  * history:
@@ -23,9 +33,13 @@ export const MAX_HISTORY_CHARS = 64_000;
  * - each message is reduced to a single text part (tool/file/reasoning
  *   parts from the wire are ignored, matching what the model call uses)
  * - history is trimmed oldest-first to MAX_HISTORY_MESSAGES and
- *   MAX_HISTORY_CHARS; the newest message always survives trimming
+ *   MAX_HISTORY_CHARS (or the tighter opts.maxHistoryChars); the newest
+ *   message always survives trimming
  */
-export function sanitizeChatMessages(raw: unknown): UIMessage[] {
+export function sanitizeChatMessages(
+  raw: unknown,
+  opts: SanitizeOptions = {},
+): UIMessage[] {
   if (!Array.isArray(raw)) return [];
 
   const cleaned: UIMessage[] = [];
@@ -53,7 +67,11 @@ export function sanitizeChatMessages(raw: unknown): UIMessage[] {
 
   // Trim oldest-first: count + char budget, walking back from the newest.
   const recent = cleaned.slice(-MAX_HISTORY_MESSAGES);
-  let budget = MAX_HISTORY_CHARS;
+  const requested = opts.maxHistoryChars;
+  let budget =
+    typeof requested === "number" && Number.isFinite(requested) && requested > 0
+      ? Math.min(Math.floor(requested), MAX_HISTORY_CHARS)
+      : MAX_HISTORY_CHARS;
   let start = recent.length;
   while (start > 0) {
     const cost = uiMessageText(recent[start - 1]).length;

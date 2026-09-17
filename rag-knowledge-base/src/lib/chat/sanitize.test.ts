@@ -105,6 +105,31 @@ describe("sanitizeChatMessages", () => {
     ]);
     expect(out.map((m) => m.id)).toEqual(["huge"]);
   });
+
+  it("honors a tighter per-model character budget", () => {
+    const out = sanitizeChatMessages(
+      [
+        msg("user", "a".repeat(600), "old"),
+        msg("assistant", "b".repeat(600), "mid"),
+        msg("user", "c".repeat(600), "new"),
+      ],
+      { maxHistoryChars: 1500 },
+    );
+    expect(out.map((m) => m.id)).toEqual(["mid", "new"]);
+  });
+
+  it("never lets the option raise the budget above the security bound", () => {
+    const third = Math.floor(MAX_HISTORY_CHARS / 3) + 1000;
+    const history = [
+      msg("user", "a".repeat(third), "old"),
+      msg("assistant", "b".repeat(third), "mid"),
+      msg("user", "c".repeat(third), "new"),
+    ];
+    for (const bad of [MAX_HISTORY_CHARS * 10, Infinity, NaN, 0, -5]) {
+      const out = sanitizeChatMessages(history, { maxHistoryChars: bad });
+      expect(out.map((m) => m.id)).toEqual(["mid", "new"]);
+    }
+  });
 });
 
 describe("uiMessageText", () => {

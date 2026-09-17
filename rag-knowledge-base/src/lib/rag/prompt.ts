@@ -5,6 +5,17 @@ import type { RetrievedChunk } from "@/lib/rag/retrieve";
 
 export const CHAT_MODEL = "gpt-4o-mini";
 
+// Why: sampling is pinned here instead of left to provider defaults. OpenAI
+// defaults to temperature 1.0 and vLLM reads whatever the model's
+// generation_config says, so an unpinned route would sample differently per
+// provider — and differently from any offline eval. Low temperature also suits
+// the task: citations must be copied verbatim, not paraphrased.
+export const CHAT_TEMPERATURE = 0.2;
+// Why: cited answers are short (well under 500 tokens in practice). The cap
+// bounds cost per reply and stops a small model that falls into a repetition
+// loop from generating until the route's maxDuration kills the request.
+export const CHAT_MAX_OUTPUT_TOKENS = 1024;
+
 const NO_SOURCES_REPLY =
   "I don't have anything about that in your uploaded documents. Try uploading a relevant file, or ask a different question.";
 
@@ -29,6 +40,16 @@ The Aurora Notebook Pro starts at $2,899 and includes a color-calibrated OLED pa
 > **Aurora Notebook — Owner's Handbook** — Aurora Notebook Pro (model code ANP-C3) — 16.2" display, 64 GB RAM, 2 TB SSD, dedicated GPU. Starting price $2,899.`;
 
 /**
+ * Flatten a chunk's whitespace exactly the way the model will see it. Exported
+ * because "is this quote verbatim?" must be checked against THIS text, not the
+ * raw chunk — the citation verifier, the eval scripts and the fine-tuning
+ * corpus export all reuse it so they can never drift from the prompt.
+ */
+export function normalizeChunkText(content: string): string {
+  return content.trim().replace(/\s+/g, " ");
+}
+
+/**
  * Build the user-facing turn: the retrieved context (numbered, with document
  * names) followed by the actual question. Returned as a single string so it
  * can be passed as `prompt` to streamText for a one-shot call, OR appended
@@ -49,10 +70,9 @@ Answer:`;
   }
 
   const rendered = chunks
-    .map((c, i) => {
-      const trimmed = c.content.trim().replace(/\s+/g, " ");
-      return `[${i + 1}] ${c.documentName}\n${trimmed}`;
-    })
+    .map(
+      (c, i) => `[${i + 1}] ${c.documentName}\n${normalizeChunkText(c.content)}`,
+    )
     .join("\n\n---\n\n");
 
   return `Sources:

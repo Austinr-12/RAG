@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { embed } from "@/lib/rag/embeddings";
 import type { RetrievedChunk } from "@/lib/rag/retrieve";
+import { RETRIEVE_DEFAULT_K } from "@/lib/rag/retrievalConfig";
 
 // Why: hybrid retrieval combines dense (semantic, embedding-based) and sparse
 // (lexical, keyword-based) signals. Dense catches paraphrase and concept match;
@@ -17,7 +18,6 @@ const RRF_K = 60;
 // that appear in both lists. If both lists overlap heavily, the extra rows are
 // discarded cheaply; if they don't, we get better recall.
 const CANDIDATE_MULTIPLIER = 3;
-const DEFAULT_K = 5;
 
 export type HybridOptions = {
   k?: number;
@@ -30,7 +30,7 @@ export async function hybridRetrieve(
 ): Promise<RetrievedChunk[]> {
   const trimmed = query.trim();
   if (!trimmed) return [];
-  const k = opts.k ?? DEFAULT_K;
+  const k = opts.k ?? RETRIEVE_DEFAULT_K;
   if (k <= 0) return [];
 
   const candidateN = k * CANDIDATE_MULTIPLIER;
