@@ -1,0 +1,26 @@
+# Python
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ipynb_checkpoints/
+
+# Secrets (HF_TOKEN, WANDB_API_KEY, OPENAI_API_KEY)
+.env
+.env.*
+!.env.example
+
+# Experiment tracking and training output
+wandb/
+outputs/
+checkpoints/
+*.safetensors
+*.bin
+*.gguf
+*.pt
+
+# Data: raw sources and generated sets live on the HF Hub, not in git
+data/raw/
+data/generated/
+*.jsonl
+!tests/fixtures/*.jsonl

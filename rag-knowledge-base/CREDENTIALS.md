@@ -42,6 +42,13 @@ non-sensitive routing config.
 | `DIRECT_URL` | Same DB password as `DATABASE_URL` — rotates together | 🔴 High |
 | `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` | Client-side Clerk key (starts with `pk_`) — shipped to browsers, so not secret, **but** you should still rotate the pair when rotating the secret to keep them from the same generation | 🟡 Ship in bundle by design |
 | `NEXT_PUBLIC_CLERK_SIGN_IN_URL` / `SIGN_UP_URL` / `_FALLBACK_REDIRECT_URL` (×4) | Route paths only | ⚪ Not sensitive |
+| `CHAT_API_KEY` (optional) | Bearer token for a self-hosted chat server, only present when `CHAT_BASE_URL` is set — anyone with this can run inference on your GPU | 🟠 Medium — you mint it yourself (e.g. vLLM `--api-key`); rotate by restarting the server with a new value |
+| `CHAT_BASE_URL` / `CHAT_MODEL_ID` / `CHAT_MAX_HISTORY_CHARS` (optional) | Which chat model answers — see `src/lib/rag/model.ts` | ⚪ Not sensitive |
+
+The app never sends `OPENAI_API_KEY` to a custom `CHAT_BASE_URL`: the custom
+path always uses `CHAT_API_KEY` or a placeholder (covered by
+`src/lib/rag/model.test.ts`). Hugging Face and Weights & Biases tokens for the
+fine-tuning work belong to `../rag-finetune`, not to this app's `.env`.
 
 ---
 

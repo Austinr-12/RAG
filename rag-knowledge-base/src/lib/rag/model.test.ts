@@ -119,8 +119,8 @@ describe("getChatModel", () => {
 
   it("calls <base>/chat/completions with the pinned sampling and no OpenAI key", async () => {
     vi.stubEnv("OPENAI_API_KEY", "sk-real-openai-key");
-    const fetchMock = vi.fn(
-      async (_input: RequestInfo | URL, _init?: RequestInit) =>
+    const fetchMock = vi.fn<typeof fetch>(
+      async () =>
         new Response(
           JSON.stringify({
             id: "chatcmpl-test",

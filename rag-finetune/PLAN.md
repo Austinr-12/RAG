@@ -4,6 +4,27 @@ Checked against `rag-knowledge-base` at commit `0602a12` on 2026-09-16.
 Every "code reality" claim below was read from the repo or from the installed
 packages in `node_modules`, not assumed.
 
+## Status (updated 2026-09-16)
+
+The app-side prep in section 8 is **done** and verified: provider switch,
+pinned sampling, citation spec, prompt contract with guards on both sides,
+corpus export, generation eval script, Aurora fixture restored, stale README
+references removed. `npm test` (90 tests), type check, lint and `next build`
+all pass. The custom-endpoint path was verified by streaming from a mock
+vLLM-style server through the real route code path.
+
+Still open before Phase 1:
+
+- **OpenAI credits.** Re-checked twice on 2026-09-16: still
+  `429 You have no credits remaining`. If funds were added, check they went to
+  the same organization and project as the key in `.env`. Then run
+  `npm run eval` (HNSW regression gate, expect hybrid 1.000 / 0.944) and
+  `npm run eval:generation` (first gpt-4o-mini baseline).
+- **Supabase DB password rotation** (section 4, item 3).
+- **WSL2 + Python env** (section 4, item 4).
+- Optional `Message.model` column: not applied, it needs a migration against
+  the live database.
+
 ## 1. Verdict
 
 The idea fits the app. There is exactly one generation call site, the prompt is
@@ -117,8 +138,10 @@ installed, and the only Python is 3.13.
 This is what makes the merge safe. The app is the single source of truth, and
 the Python side never re-types a prompt.
 
-`rag-knowledge-base/scripts/export-contract.ts` writes
-`rag-finetune/contract/prompt-contract.json` containing:
+`npm run export:contract` in the app writes
+`rag-knowledge-base/contract/prompt-contract.json`. The app owns the file, so
+its guard test never depends on this folder existing. The Python side reads it
+through `ragft/contract.py`. It contains:
 
 - `SYSTEM_PROMPT` and `NO_SOURCES_REPLY`, verbatim
 - the citation regex: `^> \*\*(.+?)\*\* — (.+)$` with a 200-char quote cap.
@@ -126,14 +149,17 @@ the Python side never re-types a prompt.
   closing `**`.
 - chunk size, overlap, top-k, temperature, max output tokens
 - three golden `(chunks, question) -> rendered prompt` samples
+- six golden citation cases with the app's verdict for each citation
 - a sha256 of all of the above
 
-Two guards keep it honest:
+Two guards keep it honest, and both are in place:
 
-- A **vitest test** in the app fails when the contract file no longer matches
-  `prompt.ts`. Changing the prompt without re-exporting breaks `npm test`.
-- A **pytest test** asserts the Python prompt renderer reproduces the golden
-  samples byte for byte.
+- A **vitest test** in the app (`src/lib/rag/contract.test.ts`) fails when the
+  contract file no longer matches the code. Changing the prompt without
+  re-exporting breaks `npm test`.
+- A **Python test** (`tests/test_contract.py`, stdlib only) asserts the Python
+  prompt renderer and citation checker reproduce every golden sample, and
+  `load_contract` refuses a file whose hash does not match its body.
 
 The dataset card and the model card both record the contract hash. A model is
 only valid for the app when the hashes match.

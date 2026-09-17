@@ -256,7 +256,9 @@ async function main() {
 
 main()
   .catch((err) => {
-    console.error(err);
+    // Why: SDK errors carry the whole HTTP response; the message alone says
+    // what to fix (no credits, DB paused, bad CHAT_* config).
+    console.error(err instanceof Error ? `${err.name}: ${err.message}` : err);
     process.exitCode = 1;
   })
   .finally(() => prisma.$disconnect());

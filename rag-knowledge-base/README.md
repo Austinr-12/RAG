@@ -12,7 +12,8 @@ Most "chat your PDFs" tutorials stop at dense vector similarity → LLM. This pr
 
 - **Hybrid retrieval** — dense vector search (pgvector) fused with Postgres full-text (`ts_rank_cd`) via [Reciprocal Rank Fusion](https://plg.uwaterloo.ca/~gvcormac/cormacksigir09-rrf.pdf). Catches both semantic paraphrase and rare lexical matches (SKUs, phone numbers, model codes).
 - **Eval harness with real metrics** — 12-question fixture derived from an included test doc, scored with **hit@K + MRR + mean top-1 similarity**. Every retrieval change gets a before/after table (see `eval-results.md`).
-- **Cited answers** — the model outputs Markdown blockquotes matching a strict format the UI parses into styled citation cards. Answers that can't be sourced explicitly refuse ("I don't have that in your documents") rather than hallucinate.
+- **Cited answers** — the model outputs Markdown blockquotes matching a strict format the UI renders as styled citation cards. Answers that can't be sourced explicitly refuse ("I don't have that in your documents") rather than hallucinate. The format is an executable spec (`src/lib/rag/citations.ts`): every citation can be checked for a real document name and a verbatim quote.
+- **Swappable answer model** — the generator is chosen by env. Unset, it's `gpt-4o-mini`; point `CHAT_BASE_URL` at any OpenAI-compatible server (vLLM, etc.) and the same route, prompt and UI run on a self-hosted model. A checked-in **prompt contract** (`contract/prompt-contract.json`, guarded by a test) pins exactly what any replacement model is given and must produce.
 - **Multi-tenant safe by construction** — every query, insert, and delete scopes by `userId`. Verified in the security review below.
 - **Deploy-ready even without deploying** — env-driven Upstash swap for rate limiting, cascade-safe deletes, structured migrations, sanitized error responses, credential rotation guide.
 
@@ -40,6 +41,7 @@ Hybrid closes the one dense-only miss (question mentioned words that never appea
 
 **Chat**
 - Streaming answers via Vercel AI SDK's `streamText` + `useChat`
+- Env-selected chat model with pinned sampling (temperature 0.2, 1024 output tokens) so every provider — and every offline eval — generates the same way
 - Inline citation rendering (custom line-by-line parser — no markdown library)
 - **Persistent history** — messages saved to `Conversation` + `Message` tables, hydrated on page load
 - "New chat" resets to a fresh conversation; old ones remain in the DB (deletable via API)
@@ -81,7 +83,7 @@ Hybrid closes the one dense-only miss (question mentioned words that never appea
 └─────────────────┘               │  ├─ hybrid retrieve (dense + BM25    │
                                   │  │   → RRF k=60)                     │
                                   │  ├─ build prompt with numbered srcs  │
-                                  │  ├─ streamText(gpt-4o-mini)          │
+                                  │  ├─ streamText(env-selected model)   │
                                   │  └─ onFinish → persist turn to DB    │
                                   └──────────────────────────────────────┘
 ```
@@ -106,12 +108,40 @@ npm run dev
 
 Open `http://localhost:3000`, sign up, go to `/dashboard/documents`, upload something (there's a test doc under `test-fixtures/`), then `/dashboard/chat` to query it.
 
-### Run the eval
+### Run the tests and evals
 
 ```powershell
+npm test
+# ~90 unit tests over the pure core: chunking, RRF, prompt, citations, model
+# switch, chat-history sanitizer, rate limiter, and the prompt-contract guard
+
 npm run eval
-# writes eval-results.md with a before/after table for every registered strategy
+# retrieval: writes eval-results.md with a before/after table for every strategy
+
+npm run eval:generation
+# generation: runs the production answer path (hybrid retrieval → prompt → model)
+# for every question and writes eval-output/*.jsonl with latency, token usage and
+# a per-citation verdict (known document? verbatim quote? within 200 chars?)
 ```
+
+Both evals use the Aurora questions, so upload `test-fixtures/aurora-notebook-handbook.md` to your account first.
+
+### Swap the answer model
+
+Chat runs on `gpt-4o-mini` unless `CHAT_BASE_URL` is set. To answer with a self-hosted OpenAI-compatible server instead (e.g. vLLM serving a fine-tuned model):
+
+```powershell
+# .env
+CHAT_BASE_URL="http://localhost:8000/v1"   # must include /v1
+CHAT_MODEL_ID="rag-grounded"               # the name the server serves
+CHAT_MAX_HISTORY_CHARS=16000               # optional: fit an 8k-token context
+```
+
+Embeddings stay on OpenAI either way. Don't use `OPENAI_BASE_URL` for this — the embeddings client reads it too (details in `src/lib/rag/model.ts`). Run `npm run eval:generation` once per provider to compare them on identical inputs.
+
+### The prompt contract
+
+`contract/prompt-contract.json` is generated from the code (`npm run export:contract`) and describes exactly what the chat model receives and must produce: the system prompt, golden rendered prompts, the citation rule with golden verdicts, chunking, top-K and sampling, all under one `sha256`. The fine-tuning pipeline in `../rag-finetune` reads this file instead of re-implementing any of it, and `npm test` fails if the file goes stale — so changing the prompt can't silently invalidate a trained model. `npm run export:corpus -- --in <docs> --out <chunks.jsonl>` chunks a folder of documents with the app's own ingestion code for the same reason.
 
 ---
 
@@ -139,11 +169,15 @@ rag-knowledge-base/
 │  │  ├─ eval/                        — question fixture, metrics, runner
 │  │  ├─ rag/
 │  │  │  ├─ chunking.ts               — recursive splitter
+│  │  │  ├─ citations.ts              — citation format spec: parse + verify quotes
+│  │  │  ├─ contract.ts               — builds the prompt contract (pure)
 │  │  │  ├─ embeddings.ts             — OpenAI batching
-│  │  │  ├─ extract.ts                — pdf-parse + text passthrough
+│  │  │  ├─ extract.ts                — pdf-parse + text passthrough, mime inference
 │  │  │  ├─ hybrid.ts                 — dense + sparse RRF (production)
 │  │  │  ├─ ingest.ts                 — orchestrator + transaction
-│  │  │  ├─ prompt.ts                 — system prompt + citation format
+│  │  │  ├─ model.ts                  — env-selected chat model (OpenAI | custom)
+│  │  │  ├─ prompt.ts                 — system prompt, prompt builder, pinned sampling
+│  │  │  ├─ retrievalConfig.ts        — top-K default (dependency-free)
 │  │  │  └─ retrieve.ts               — dense-only baseline
 │  │  ├─ security/rateLimit.ts        — in-memory / Upstash limiter
 │  │  ├─ openai.ts                    — singleton
@@ -155,11 +189,15 @@ rag-knowledge-base/
 │  └─ migrations/                     — versioned SQL
 ├─ scripts/
 │  ├─ eval.ts                         — CLI: baseline vs. hybrid, writes eval-results.md
-│  └─ debug-retrieve.ts               — one-off top-K dump for a single query
+│  ├─ eval-generation.ts              — CLI: production answer path per question → JSONL
+│  ├─ export-contract.ts              — writes contract/prompt-contract.json
+│  ├─ export-corpus.ts                — docs folder → chunks.jsonl via the app's own ingestion
+│  ├─ debug-retrieve.ts               — one-off top-K dump for a single query
+│  └─ test-chunker.ts, test-extract.ts — no-network smoke scripts
+├─ contract/prompt-contract.json      — generated; what any answer model is given + must produce
 ├─ test-fixtures/                     — sample docs for ingestion + eval
 ├─ eval-results.md                    — checked-in eval artifact
 ├─ CREDENTIALS.md                     — where every secret lives + how to rotate
-├─ handoff.md                         — session-restart context for AI-assisted dev
 └─ AGENTS.md                          — reminder that this Next isn't your training-data Next
 ```
 
@@ -167,7 +205,7 @@ rag-knowledge-base/
 
 ## Security posture
 
-Two axes: unauthorized data access (multi-tenant isolation) and spam / cost DoS. Full findings + status in [`handoff.md`](./handoff.md) §"Security posture". Highlights:
+Two axes: unauthorized data access (multi-tenant isolation) and spam / cost DoS. Highlights:
 
 - **Fixed:** rate limits (five buckets), per-user document + chunk caps, sanitized error responses, typed 401 responses, filename length cap, DELETE id shape validation, cross-tenant scoping on every DB query.
 - **Deferred:** pagination on `GET /api/documents` (rate-limited instead — no exploit path, cosmetic under 50 docs), PDF worker memory bound (needs external process, platform-layer not code).
@@ -183,13 +221,15 @@ For credential rotation (leaked keys, deploy prep): [`CREDENTIALS.md`](./CREDENT
 - **No cross-encoder rerank stage.** The eval's one remaining #3 result (encryption question — chunking artifact) would likely go to #1 with a Cohere or Voyage reranker. Deferred to keep the dep count small.
 - **In-memory rate limits by default.** Fine for solo dev / single container; multi-region deploys should flip on Upstash via env vars.
 - **No conversation sidebar yet.** Chat persists per-user, but the UI only exposes the most recent conversation + a "New chat" button. Full history browsing is a natural next step.
+- **Answer model is still gpt-4o-mini.** The seam for replacing it with a fine-tuned open-weight model is in place (env switch, prompt contract, generation eval); the training work itself lives in `../rag-finetune` and is in progress.
 
 ---
 
 ## Learn-log
 
-Kept as durable notes in [`handoff.md`](./handoff.md), including breaking changes I hit and workarounds:
+Breaking changes I hit and the workarounds:
 
+- **AI SDK OpenAI provider v4** — `openai("model")` targets the Responses API (`/v1/responses`). Self-hosted OpenAI-compatible servers implement Chat Completions, so a custom `baseURL` needs `createOpenAI({ baseURL, apiKey }).chat("model")`. Also: `createOpenAI()` without an explicit `apiKey` falls back to `OPENAI_API_KEY` — always pass one, or your real key goes to the custom host.
 - **Next 16** renamed `middleware.ts` → `proxy.ts`; `<SignedIn>` in Clerk 7 → `<Show when="signed-in">`; `auth.protect()` is async.
 - **Prisma 7** moved `url`/`directUrl` out of `schema.prisma` into `prisma.config.ts`; needs `@prisma/adapter-pg`; imports `PrismaClient` from a generated path, not `@prisma/client`.
 - **Vercel AI SDK 7** `convertToModelMessages` became async; `useChat` v6→v7 dropped `input`/`handleInputChange`/`handleSubmit` — caller manages input state, calls `sendMessage({text})`; `.toDataStreamResponse()` → `.toUIMessageStreamResponse()`.
