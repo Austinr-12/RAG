@@ -5,6 +5,7 @@ import {
   ChunkLimitExceededError,
   DocumentQuotaExceededError,
 } from "@/lib/rag/ingest";
+import { inferMimeType, isSupportedMimeType } from "@/lib/rag/extract";
 import { requireUser, unauthenticated, tooMany } from "@/lib/api/guards";
 import {
   BUCKETS,
@@ -17,13 +18,6 @@ import {
 export const runtime = "nodejs";
 // Why: embedding 50-chunk docs can take ~20s of OpenAI time.
 export const maxDuration = 60;
-
-const MAX_BYTES = 10 * 1024 * 1024;
-const ALLOWED_MIME = new Set([
-  "application/pdf",
-  "text/plain",
-  "text/markdown",
-]);
 
 export async function POST(request: Request) {
   const user = await requireUser();
@@ -67,12 +61,12 @@ export async function POST(request: Request) {
     if (file.size === 0) {
       return NextResponse.json({ error: "File is empty" }, { status: 400 });
     }
-    if (file.size > MAX_BYTES) {
+    if (file.size > UPLOAD_LIMITS.maxBytes) {
       return NextResponse.json({ error: "File exceeds 10MB limit" }, { status: 413 });
     }
     // Why: browser-reported file.type is sometimes empty (.md on Windows); fall back to extension.
-    const mime = file.type || inferMime(file.name);
-    if (!ALLOWED_MIME.has(mime)) {
+    const mime = file.type || inferMimeType(file.name);
+    if (!isSupportedMimeType(mime)) {
       return NextResponse.json(
         { error: "Only PDF, plain text, and markdown are supported" },
         { status: 415 },
@@ -104,12 +98,4 @@ export async function POST(request: Request) {
     console.error("[upload] failed", err);
     return NextResponse.json({ error: "Upload failed" }, { status: 500 });
   }
-}
-
-function inferMime(name: string): string {
-  const lower = name.toLowerCase();
-  if (lower.endsWith(".pdf")) return "application/pdf";
-  if (lower.endsWith(".md") || lower.endsWith(".markdown")) return "text/markdown";
-  if (lower.endsWith(".txt")) return "text/plain";
-  return "application/octet-stream";
 }

@@ -1,0 +1,236 @@
+{
+  "contractVersion": 1,
+  "description": [
+    "Generated from rag-knowledge-base/src/lib/rag by `npm run export:contract`. Do not edit by hand.",
+    "Message layout sent to the chat model: system = systemPrompt; the LATEST user turn = a rendered retrieval prompt (see goldenPrompts[].rendered); earlier user turns are the raw questions and earlier assistant turns are prior replies, unmodified.",
+    "When a brand-new conversation retrieves zero chunks the app replies with noSourcesReply and never calls the model.",
+    "Rendered prompts use sources[].normalized (whitespace flattened by the app). Consumers should use the normalized text as given instead of re-implementing the normalization.",
+    "A citation is valid when its line matches citation.linePattern, the document name exactly equals a source name in the prompt, the quote is a substring of that document's normalized text, and the quote is at most citation.maxQuoteChars long.",
+    "sha256 = SHA-256 (hex) of JSON.stringify of this object without the sha256 key, keys in file order."
+  ],
+  "systemPrompt": "You are a helpful research assistant answering questions about the user's uploaded documents.\n\nRULES:\n1. Answer ONLY from the provided sources. If the sources do not contain enough information to answer, say so plainly and do not guess.\n2. When you use a specific fact from a source, immediately follow the sentence with a markdown blockquote on its own line in this EXACT format:\n   > **{Document Name}** — {the exact quoted text from that source, ≤ 200 characters}\n3. Never invent document names or quotes. Only quote text that appears verbatim in the sources below.\n4. Prefer short, direct answers. Use bullet points when listing multiple items.\n5. If the user asks a follow-up that isn't covered by the sources, do not fall back to general knowledge — say the documents don't cover it.\n\nFormat example:\nThe Aurora Notebook Pro starts at $2,899 and includes a color-calibrated OLED panel.\n> **Aurora Notebook — Owner's Handbook** — Aurora Notebook Pro (model code ANP-C3) — 16.2\" display, 64 GB RAM, 2 TB SSD, dedicated GPU. Starting price $2,899.",
+  "noSourcesReply": "I don't have anything about that in your uploaded documents. Try uploading a relevant file, or ask a different question.",
+  "citation": {
+    "linePattern": "^> \\*\\*(.+?)\\*\\* — (.+)$",
+    "maxQuoteChars": 200
+  },
+  "chunking": {
+    "chunkSize": 1000,
+    "chunkOverlap": 200
+  },
+  "retrieval": {
+    "topK": 5
+  },
+  "generation": {
+    "temperature": 0.2,
+    "maxOutputTokens": 1024
+  },
+  "goldenPrompts": [
+    {
+      "name": "two-documents-messy-whitespace",
+      "question": "How long is the warranty and who do I call?",
+      "sources": [
+        {
+          "documentName": "aurora-notebook-handbook.md",
+          "content": "## Warranty\n\nEvery Aurora Notebook is covered by a\n  one-year   limited warranty\tfrom the date of purchase.\n",
+          "normalized": "## Warranty Every Aurora Notebook is covered by a one-year limited warranty from the date of purchase."
+        },
+        {
+          "documentName": "support-faq.txt",
+          "content": "  Phone support: 1-800-287-6721 (Mon–Fri, 8am–8pm ET).  ",
+          "normalized": "Phone support: 1-800-287-6721 (Mon–Fri, 8am–8pm ET)."
+        }
+      ],
+      "rendered": "Sources:\n\n[1] aurora-notebook-handbook.md\n## Warranty Every Aurora Notebook is covered by a one-year limited warranty from the date of purchase.\n\n---\n\n[2] support-faq.txt\nPhone support: 1-800-287-6721 (Mon–Fri, 8am–8pm ET).\n\nQuestion: How long is the warranty and who do I call?\n\nAnswer:"
+    },
+    {
+      "name": "full-top-k-repeated-document",
+      "question": "What is the price of the Pro model?",
+      "sources": [
+        {
+          "documentName": "Aurora Notebook — Owner's Handbook",
+          "content": "Aurora Notebook Pro (model code ANP-C3) — 16.2\" display, 64 GB RAM, 2 TB SSD, dedicated GPU. Starting price $2,899.",
+          "normalized": "Aurora Notebook Pro (model code ANP-C3) — 16.2\" display, 64 GB RAM, 2 TB SSD, dedicated GPU. Starting price $2,899."
+        },
+        {
+          "documentName": "Aurora Notebook — Owner's Handbook",
+          "content": "Starting price $2,899.\n\n## Battery\n\nThe battery is rated for 1,000 full charge cycles.",
+          "normalized": "Starting price $2,899. ## Battery The battery is rated for 1,000 full charge cycles."
+        },
+        {
+          "documentName": "pricing_2025-Q3.pdf",
+          "content": "Résumé of list prices — all “Pro” configurations ship with AuroraCare+.",
+          "normalized": "Résumé of list prices — all “Pro” configurations ship with AuroraCare+."
+        },
+        {
+          "documentName": "aurora-notebook-handbook.md",
+          "content": "- **Aurora Notebook 13** (model code AN13-A1) — 13.4\" display. Starting price $1,299.",
+          "normalized": "- **Aurora Notebook 13** (model code AN13-A1) — 13.4\" display. Starting price $1,299."
+        },
+        {
+          "documentName": "notes.txt",
+          "content": "Unrelated meeting notes.\r\nNothing about pricing here.",
+          "normalized": "Unrelated meeting notes. Nothing about pricing here."
+        }
+      ],
+      "rendered": "Sources:\n\n[1] Aurora Notebook — Owner's Handbook\nAurora Notebook Pro (model code ANP-C3) — 16.2\" display, 64 GB RAM, 2 TB SSD, dedicated GPU. Starting price $2,899.\n\n---\n\n[2] Aurora Notebook — Owner's Handbook\nStarting price $2,899. ## Battery The battery is rated for 1,000 full charge cycles.\n\n---\n\n[3] pricing_2025-Q3.pdf\nRésumé of list prices — all “Pro” configurations ship with AuroraCare+.\n\n---\n\n[4] aurora-notebook-handbook.md\n- **Aurora Notebook 13** (model code AN13-A1) — 13.4\" display. Starting price $1,299.\n\n---\n\n[5] notes.txt\nUnrelated meeting notes. Nothing about pricing here.\n\nQuestion: What is the price of the Pro model?\n\nAnswer:"
+    },
+    {
+      "name": "no-sources",
+      "question": "What is the capital of France?",
+      "sources": [],
+      "rendered": "Sources: (none — the user has no documents that match this question)\n\nQuestion: What is the capital of France?\n\nAnswer:"
+    }
+  ],
+  "goldenCitations": [
+    {
+      "name": "valid-single-citation",
+      "reply": "The warranty lasts one year.\n> **aurora-notebook-handbook.md** — covered by a one-year limited warranty from the date of purchase",
+      "sources": [
+        {
+          "documentName": "aurora-notebook-handbook.md",
+          "content": "Every Aurora Notebook is covered by a\n  one-year   limited warranty\tfrom the date of purchase."
+        }
+      ],
+      "expected": {
+        "citations": [
+          {
+            "documentName": "aurora-notebook-handbook.md",
+            "quote": "covered by a one-year limited warranty from the date of purchase",
+            "knownDocument": true,
+            "verbatim": true,
+            "withinLength": true,
+            "valid": true
+          }
+        ],
+        "malformedCount": 0
+      }
+    },
+    {
+      "name": "em-dash-in-document-name-and-quote",
+      "reply": "The Pro starts at $2,899.\n> **Aurora Notebook — Owner's Handbook** — Aurora Notebook Pro (model code ANP-C3) — 16.2\" display",
+      "sources": [
+        {
+          "documentName": "Aurora Notebook — Owner's Handbook",
+          "content": "Aurora Notebook Pro (model code ANP-C3) — 16.2\" display, 64 GB RAM. Starting price $2,899."
+        }
+      ],
+      "expected": {
+        "citations": [
+          {
+            "documentName": "Aurora Notebook — Owner's Handbook",
+            "quote": "Aurora Notebook Pro (model code ANP-C3) — 16.2\" display",
+            "knownDocument": true,
+            "verbatim": true,
+            "withinLength": true,
+            "valid": true
+          }
+        ],
+        "malformedCount": 0
+      }
+    },
+    {
+      "name": "paraphrase-wrong-document-and-invented-name",
+      "reply": "Support is available by phone.\n> **support-faq.txt** — You can call support at 1-800-287-6721\n> **aurora-notebook-handbook.md** — Phone support: 1-800-287-6721\n> **Support FAQ** — Phone support: 1-800-287-6721\n> **support-faq.txt** — Phone support: 1-800-287-6721",
+      "sources": [
+        {
+          "documentName": "aurora-notebook-handbook.md",
+          "content": "One-year limited warranty."
+        },
+        {
+          "documentName": "support-faq.txt",
+          "content": "Phone support: 1-800-287-6721 (Mon–Fri)."
+        }
+      ],
+      "expected": {
+        "citations": [
+          {
+            "documentName": "support-faq.txt",
+            "quote": "You can call support at 1-800-287-6721",
+            "knownDocument": true,
+            "verbatim": false,
+            "withinLength": true,
+            "valid": false
+          },
+          {
+            "documentName": "aurora-notebook-handbook.md",
+            "quote": "Phone support: 1-800-287-6721",
+            "knownDocument": true,
+            "verbatim": false,
+            "withinLength": true,
+            "valid": false
+          },
+          {
+            "documentName": "Support FAQ",
+            "quote": "Phone support: 1-800-287-6721",
+            "knownDocument": false,
+            "verbatim": false,
+            "withinLength": true,
+            "valid": false
+          },
+          {
+            "documentName": "support-faq.txt",
+            "quote": "Phone support: 1-800-287-6721",
+            "knownDocument": true,
+            "verbatim": true,
+            "withinLength": true,
+            "valid": true
+          }
+        ],
+        "malformedCount": 0
+      }
+    },
+    {
+      "name": "malformed-lines",
+      "reply": "The warranty lasts one year.\n> **aurora-notebook-handbook.md** - One-year limited warranty.\n> aurora-notebook-handbook.md — One-year limited warranty.\n  > **aurora-notebook-handbook.md** — One-year limited warranty.\n- One-year limited warranty (a bullet, not a citation)",
+      "sources": [
+        {
+          "documentName": "aurora-notebook-handbook.md",
+          "content": "One-year limited warranty."
+        }
+      ],
+      "expected": {
+        "citations": [],
+        "malformedCount": 3
+      }
+    },
+    {
+      "name": "quote-over-length-cap",
+      "reply": "Long quote.\n> **big.txt** — lorem ipsum lorem ipsum lorem ipsum lorem ipsum lorem ipsum lorem ipsum lorem ipsum lorem ipsum lorem ipsum lorem ipsum lorem ipsum lorem ipsum lorem ipsum lorem ipsum lorem ipsum lorem ipsum lorem ipsum lorem ipsum lorem ipsum lorem ipsum",
+      "sources": [
+        {
+          "documentName": "big.txt",
+          "content": "lorem ipsum lorem ipsum lorem ipsum lorem ipsum lorem ipsum lorem ipsum lorem ipsum lorem ipsum lorem ipsum lorem ipsum lorem ipsum lorem ipsum lorem ipsum lorem ipsum lorem ipsum lorem ipsum lorem ipsum lorem ipsum lorem ipsum lorem ipsum lorem ipsum lorem ipsum lorem ipsum lorem ipsum lorem ipsum lorem ipsum lorem ipsum lorem ipsum lorem ipsum lorem ipsum "
+        }
+      ],
+      "expected": {
+        "citations": [
+          {
+            "documentName": "big.txt",
+            "quote": "lorem ipsum lorem ipsum lorem ipsum lorem ipsum lorem ipsum lorem ipsum lorem ipsum lorem ipsum lorem ipsum lorem ipsum lorem ipsum lorem ipsum lorem ipsum lorem ipsum lorem ipsum lorem ipsum lorem ipsum lorem ipsum lorem ipsum lorem ipsum",
+            "knownDocument": true,
+            "verbatim": true,
+            "withinLength": false,
+            "valid": false
+          }
+        ],
+        "malformedCount": 0
+      }
+    },
+    {
+      "name": "abstention",
+      "reply": "I don't have anything about that in your uploaded documents.",
+      "sources": [
+        {
+          "documentName": "aurora-notebook-handbook.md",
+          "content": "One-year limited warranty."
+        }
+      ],
+      "expected": {
+        "citations": [],
+        "malformedCount": 0
+      }
+    }
+  ],
+  "sha256": "943f4e1c9ac533ccdbf03420e20687a799b7b3a3a291982c7b3a1729ad816033"
+}

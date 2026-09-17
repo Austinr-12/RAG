@@ -11,6 +11,24 @@ export const SUPPORTED_MIME_TYPES = [
   "text/markdown",
 ] as const;
 
+export type SupportedMimeType = (typeof SUPPORTED_MIME_TYPES)[number];
+
+export function isSupportedMimeType(mime: string): mime is SupportedMimeType {
+  return (SUPPORTED_MIME_TYPES as readonly string[]).includes(mime);
+}
+
+// Why: browser-reported file.type is sometimes empty (.md on Windows), and
+// files read from disk have no mime at all — fall back to the extension. Lives
+// here so the upload route and the corpus export script classify files
+// identically.
+export function inferMimeType(filename: string): string {
+  const lower = filename.toLowerCase();
+  if (lower.endsWith(".pdf")) return "application/pdf";
+  if (lower.endsWith(".md") || lower.endsWith(".markdown")) return "text/markdown";
+  if (lower.endsWith(".txt")) return "text/plain";
+  return "application/octet-stream";
+}
+
 export async function extractText(
   buffer: Buffer,
   mimeType: string,

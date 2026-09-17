@@ -19,6 +19,10 @@ export const UPLOAD_LIMITS = {
   perDay: 50,
   maxDocumentsPerUser: 100,
   maxChunksPerFile: 500,
+  maxBytes: 10 * 1024 * 1024,
+  // Why: filename is displayed and stored — cap length so pathological inputs
+  // (huge names, direction-override tricks) don't bloat the DB or the UI.
+  maxFilenameChars: 255,
 } as const;
 
 export const READ_LIMITS = {

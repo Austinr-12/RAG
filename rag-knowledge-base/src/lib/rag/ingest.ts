@@ -43,10 +43,6 @@ export class DocumentQuotaExceededError extends Error {
   }
 }
 
-// Why: filename is displayed and stored — cap length so pathological inputs
-// (huge names, direction-override tricks) don't bloat the DB or the UI.
-const MAX_FILENAME_LENGTH = 255;
-
 export async function ingest(input: IngestInput): Promise<IngestResult> {
   const text = await extractText(input.buffer, input.mimeType);
   if (!text.trim()) throw new Error("No extractable text in file");
@@ -59,7 +55,7 @@ export async function ingest(input: IngestInput): Promise<IngestResult> {
     throw new ChunkLimitExceededError(chunks.length, UPLOAD_LIMITS.maxChunksPerFile);
   }
 
-  const filename = input.filename.slice(0, MAX_FILENAME_LENGTH);
+  const filename = input.filename.slice(0, UPLOAD_LIMITS.maxFilenameChars);
 
   const embeddings = await embedBatch(chunks);
   if (embeddings.some((e) => e.length !== EMBEDDING_DIMENSIONS)) {

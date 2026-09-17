@@ -8,7 +8,10 @@
     "start": "next start",
     "lint": "eslint",
     "test": "vitest run",
-    "eval": "tsx --env-file=.env scripts/eval.ts"
+    "eval": "tsx --env-file=.env scripts/eval.ts",
+    "eval:generation": "tsx --env-file=.env scripts/eval-generation.ts",
+    "export:contract": "tsx scripts/export-contract.ts",
+    "export:corpus": "tsx scripts/export-corpus.ts"
   },
   "dependencies": {
     "@ai-sdk/openai": "^4.0.43",

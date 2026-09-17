@@ -15,6 +15,6 @@ export default defineConfig({
   },
   resolve: {
     // Mirror tsconfig's "@/*" -> "./src/*" alias.
-    alias: { "@": path.resolve(__dirname, "src") },
+    alias: { "@": path.resolve(import.meta.dirname, "src") },
   },
 });
