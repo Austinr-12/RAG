@@ -11,7 +11,7 @@
 | `OPENAI_API_KEY` | ✅ **Rotated 2026-09-10.** New key verified working (models endpoint 200). Heads-up: the account's API credit balance was empty at last check — embeddings/chat/eval fail with `insufficient_quota` until credits are added. |
 | `CLERK_SECRET_KEY` | ✅ **Rotated 2026-09-10.** New key verified working (Clerk API 200). |
 | `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` | Unchanged — doesn't auto-rotate and ships to browsers by design. |
-| `DATABASE_URL` / `DIRECT_URL` password | 🔴 **Still the original transcript-exposed password — rotate this one.** Follow §3 below; a Supabase Postgres upgrade is a convenient moment to do it. |
+| `DATABASE_URL` / `DIRECT_URL` password | ✅ **Rotated 2026-09-21.** Verified: pooled + direct connections OK, data and HNSW/GIN indexes intact, `prisma migrate status` clean (Postgres 17.6). Gotcha hit during rotation: the generated password contained `#`, which must be written as `%23` in the URL or the port fails to parse. |
 
 ## Why this matters
 
@@ -111,9 +111,10 @@ are updated.
   ```
   postgresql://postgres.rcmwbfirmelhbnokqiuu:<PASSWORD>@aws-1-us-west-1.pooler.supabase.com:5432/postgres
   ```
-- Paste your new password in place of `<PASSWORD>` (URL-encode any special
-  characters — Supabase-generated passwords usually don't need this, but if
-  yours has `@`, `#`, `%`, etc, encode them)
+- Paste your new password in place of `<PASSWORD>`. **URL-encode special
+  characters** — Supabase-generated passwords DO contain them (the 2026-09-21
+  one had `#`). `#` → `%23`, `@` → `%40`, `%` → `%25`, `&` → `%26`, `/` → `%2F`,
+  `?` → `%3F`. An unencoded `#` produces "invalid port number in database URL".
 - In `.env` — both `DATABASE_URL` and `DIRECT_URL` use the same connection
   string; update both:
   ```
