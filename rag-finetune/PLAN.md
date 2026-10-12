@@ -40,6 +40,11 @@ release lists it before Phase 3 starts.
 
 ### Phase 0 start sequence
 
+**Progress 2026-10-11 evening:** steps 1 to 4 below are done (see
+`PROGRESS.md` for the step-by-step record and the resume checklist).
+Steps 5 and 6 wait for an idle GPU; step 7 waits for OpenAI credits.
+
+
 1. Windows: move the distro to D:, write `.wslconfig`, `wsl --shutdown`,
    confirm `free -g` inside Ubuntu shows about 10 GB.
 2. Ubuntu: `apt` build tools, `uv`, Python 3.12. Venv at `~/.venvs/ragft` and

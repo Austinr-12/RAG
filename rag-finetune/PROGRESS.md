@@ -80,3 +80,54 @@ Conventions:
   `$VAR` inside `wsl.exe -- bash -c '...'`; use PowerShell with a
   single-quoted string instead, e.g.
   `wsl -d Ubuntu -- bash -c 'source ~/.venvs/ragft/bin/activate; python ...'`.
+- **Step 3 done.** `~/install.log` ended `INSTALL_OK`. Installed into
+  `~/.venvs/ragft` (8.3 GB): torch 2.13.0+cu130 (CUDA available), transformers
+  5.17.0, trl 1.15.0, peft 0.21.2, bitsandbytes 0.50.2, vllm 0.31.0, wandb
+  0.30.0. Exact set frozen in `requirements.lock.txt`. Both base models are in
+  `~/hf/hub` (12 GB total): Qwen3-4B-Instruct-2507 and Qwen3-1.7B.
+- Note for the training script: transformers 5.x and TRL 1.x are newer than
+  the APIs the plan was written against; `scripts/smoke_train.py` uses the
+  TRL 1.x names (`max_length`, `completion_only_loss`, `processing_class`).
+  Fix forward if the first run objects.
+- `scripts/serve-bg.sh` added: starts vLLM detached, blocks until
+  `/v1/models` answers 200 or the log shows a Traceback, `--stop` and
+  `--status` subcommands. Log at `~/vllm.log`.
+- **GPU contention noted.** At 21:55 the GPU already had 3.2 GB in use by
+  Windows: `dwm` 4.6 GB reported by perf counters and a running Steam game
+  (GoWEDay, 2.6 GB). Serving the 4B in bf16 needs about 10 GB, so step 5
+  (vLLM serve + `smoke_serve.py`) waits for an idle GPU. Step 6 launched
+  anyway with `--steps 20` for the template and masking checks; its tokens/s
+  is contaminated by the game and must be re-measured on an idle GPU.
+  Launched with `scripts/run-bg.sh smoke4b python scripts/smoke_train.py
+  --no-wandb --steps 20`, log `~/smoke4b.log`, ends with `EXIT=<code>`.
+
+### 2026-10-11 evening — paused
+
+- The Claude session ended while `smoke4b` was running; WSL shut down with it
+  and the detached run died before flushing anything (`~/smoke4b.log` is
+  0 bytes). **The training smoke test has not run yet.** Fix applied:
+  `scripts/run-bg.sh` now exports `PYTHONUNBUFFERED=1` so partial output
+  survives a kill.
+- Paused at the user's request (GPU is needed for gaming tonight). WSL shut
+  down with `wsl --shutdown`; nothing of ours is running.
+- Phase 0 state: steps 1 to 4 done, step 5 (serve + `smoke_serve.py`) and
+  step 6 (`smoke_train.py` on 4B and 1.7B) not started, step 7 waits on
+  OpenAI credits.
+
+**Resume checklist for tomorrow (idle GPU, nothing else using VRAM):**
+
+1. `wsl -d Ubuntu -- bash /mnt/c/dev/RAG/rag-finetune/scripts/check-env.sh`
+   should show the full stack and the GPU with under 1 GB used.
+2. Serve: `bash scripts/serve-bg.sh` (prints READY), then
+   `source ~/.venvs/ragft/bin/activate && python scripts/smoke_serve.py --json outputs/smoke/serve-base.json`.
+   Then `bash scripts/serve-bg.sh --stop` to free VRAM.
+3. Train smoke: `bash scripts/run-bg.sh smoke4b python scripts/smoke_train.py --no-wandb`
+   (50 steps), wait for `EXIT=0` in `~/smoke4b.log`, read
+   `outputs/smoke/Qwen3-4B-Instruct-2507/summary.json`. Then the same with
+   `--model Qwen/Qwen3-1.7B --steps 20` as `smoke17b`.
+4. If TRL 1.15 rejects an `SFTConfig` field, fix forward in
+   `scripts/smoke_train.py` and note the change here.
+5. Record tokens/s and peak VRAM in the PLAN.md status block; size Phase 1
+   and Phase 3 from them.
+6. Still needed from the user: OpenAI credits (about $20), `HF_TOKEN` and
+   `WANDB_API_KEY` in `rag-finetune/.env`.
