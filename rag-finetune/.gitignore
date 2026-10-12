@@ -24,3 +24,7 @@ data/raw/
 data/generated/
 *.jsonl
 !tests/fixtures/*.jsonl
+
+# Editable install metadata and local logs
+*.egg-info/
+*.log

@@ -35,3 +35,48 @@ Conventions:
 - Base model decision re-verified: Qwen3-4B-Instruct-2507 headline,
   Qwen3-1.7B (thinking off) for ablations. Qwen3.5-4B rejected for now
   (needs transformers/vLLM from main, has a vision encoder).
+- **Step 1 done (Windows side).** `wsl --manage Ubuntu --move D:\wsl\Ubuntu`
+  moved the 1.4 GB distro image off C:. Wrote `C:\Users\austi\.wslconfig`
+  (memory 10GB, swap 24GB at `D:\wsl\swap.vhdx`, localhostForwarding). After
+  `wsl --shutdown`, Ubuntu shows 10 GB RAM, 24 GB swap, 955 GB free on `/`,
+  user `austin`, GPU visible.
+- Scaffolding written: `pyproject.toml` (package `ragft`, Python 3.12,
+  deps), `.env.example`, `.gitattributes` (LF for .sh/.py), and
+  `scripts/setup-ubuntu.sh` (idempotent env setup, `--system` part as root).
+- **Step 2 done (Ubuntu user env).** `scripts/setup-ubuntu.sh --system` as
+  root installed gcc 15.2, git 2.53, curl. The user part installed uv 0.13.0,
+  CPython 3.12.15, venv at `~/.venvs/ragft`, `HF_HOME=~/hf`, and the `ragft`
+  alias in `~/.bashrc`.
+- **Step 3 started (background).** `uv pip install vllm` then `-e .` then
+  `uv pip freeze > requirements.lock.txt`, log at `~/install.log` in Ubuntu
+  (ends with `INSTALL_OK` or `INSTALL_FAILED`). Model downloads
+  Qwen/Qwen3-4B-Instruct-2507 and Qwen/Qwen3-1.7B into `~/hf`, log at
+  `~/download.log` (ends with `DL_OK` or `DL_FAILED`).
+- **Step 3 relaunched correctly.** First attempt never started: PowerShell
+  expands `$HOME` inside double-quoted strings before Ubuntu sees the command.
+  Lesson: put background work in a script file and launch it with
+  `wsl.exe -d Ubuntu -- bash -c 'setsid nohup bash <script> > ~/x.log 2>&1 < /dev/null &'`
+  from Git Bash (single quotes). Scripts: `scripts/install-deps.sh` (log
+  `~/install.log`, ends `INSTALL_OK`/`INSTALL_FAILED`, also prints installed
+  versions and freezes `requirements.lock.txt`) and
+  `scripts/download-models.sh` (log `~/download.log`, ends `DL_OK`/`DL_FAILED`).
+  vLLM 0.31 pulled the CUDA 13 torch stack (`nvidia-cudnn-cu13`), which the
+  616.92 driver (CUDA 13.4) supports.
+- Code written for Phase 0 steps 5 and 6: `ragft/client.py` (the single
+  OpenAI-compatible streaming client with contract sampling and TTFT),
+  `scripts/serve.sh` (vLLM flags for the 3060), `scripts/smoke_serve.py`
+  (golden prompts through the served model, citation-scanned, exit 1 on
+  failure), `scripts/smoke_train.py` (4-bit load, template print, masked-label
+  proof, 50-step throughput and peak VRAM, summary JSON, W&B optional).
+  None of these have run yet; they wait on the install.
+- **Step 4 half done.** `tests/test_contract.py` passes on the Ubuntu venv
+  Python 3.12 (5 tests, contract sha256 `943f4e1c…`). The three new Python
+  files compile. `scripts/check-env.sh` added as the start-of-session health
+  check (contract test, compile, installed stack, GPU, HF cache). The
+  `torch.cuda` check waits on the install.
+- Qwen/Qwen3-4B-Instruct-2507 downloaded (7.6 GB in `~/hf/hub`), Qwen3-1.7B in
+  progress.
+- Lesson for ad-hoc Ubuntu commands from this harness: Git Bash mangles
+  `$VAR` inside `wsl.exe -- bash -c '...'`; use PowerShell with a
+  single-quoted string instead, e.g.
+  `wsl -d Ubuntu -- bash -c 'source ~/.venvs/ragft/bin/activate; python ...'`.

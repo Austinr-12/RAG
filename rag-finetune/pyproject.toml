@@ -1,0 +1,36 @@
+[project]
+name = "ragft"
+version = "0.1.0"
+description = "Grounded-answer fine-tune for rag-knowledge-base: dataset build, QLoRA training, evaluation and serving"
+requires-python = ">=3.12,<3.13"
+dependencies = [
+  # Serving and the one chat client path. vllm pins its own torch; install it
+  # first (see scripts/setup-ubuntu.sh) so nothing else re-resolves torch.
+  "vllm",
+  "openai",
+  # Training
+  "transformers",
+  "trl",
+  "peft",
+  "bitsandbytes",
+  "accelerate",
+  "datasets",
+  # Tracking and hub
+  "wandb",
+  "huggingface_hub",
+  # Dataset build
+  "rank-bm25",
+  "python-dotenv",
+  # Tests
+  "pytest",
+]
+
+[build-system]
+requires = ["setuptools>=69"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+packages = ["ragft"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
