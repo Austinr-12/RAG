@@ -37,9 +37,11 @@ class Endpoint:
     def vllm(
         cls,
         model: str = "rag-grounded",
-        base_url: str = "http://localhost:8000/v1",
+        base_url: str = "http://127.0.0.1:8000/v1",
         api_key: str | None = None,
     ) -> "Endpoint":
+        # Why 127.0.0.1 and not localhost: vLLM binds IPv4, and Python's HTTP
+        # stack may resolve localhost to ::1 first and get connection refused.
         # Why a placeholder: the OpenAI SDK refuses to start without a key, and
         # the real OPENAI_API_KEY must never be sent to a local server.
         return cls(model=model, base_url=base_url, api_key=api_key or PLACEHOLDER_API_KEY)

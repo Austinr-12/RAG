@@ -25,7 +25,7 @@ from ragft.contract import build_messages, load_contract, scan_citations  # noqa
 
 def main() -> int:
     ap = argparse.ArgumentParser()
-    ap.add_argument("--base-url", default="http://localhost:8000/v1")
+    ap.add_argument("--base-url", default="http://127.0.0.1:8000/v1")
     ap.add_argument("--model", default="rag-grounded")
     ap.add_argument("--api-key", default="dev")
     ap.add_argument("--openai", action="store_true", help="call api.openai.com gpt-4o-mini instead")

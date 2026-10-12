@@ -15,6 +15,12 @@ CODE="${CODE:-/mnt/c/dev/RAG/rag-finetune}"
 VENV="${VENV:-$HOME/.venvs/ragft}"
 export HF_HOME="${HF_HOME:-$HOME/hf}"
 export PYTHONUNBUFFERED=1   # stream logs line by line; a killed run still leaves its output
+# Why: WSL appends the Windows PATH, which contains an unreadable systemprofile
+# folder. Python then raises PermissionError instead of FileNotFoundError when
+# a tool such as nvcc is missing, and torch inductor crashes on it. Keep only
+# Linux entries.
+export PATH="$(IFS=:; for d in $PATH; do [[ $d == /mnt/* ]] || printf '%s:' "$d"; done)"
+export PATH="${PATH%:}"
 cd "$CODE"
 if [[ -f .env ]]; then set -a; source .env 2>/dev/null || true; set +a; fi
 : > "$LOG"

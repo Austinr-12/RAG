@@ -138,3 +138,60 @@ Conventions:
   them by PID, then `wsl --shutdown` held. Lesson: before pausing, kill
   leftover wait loops (`Get-CimInstance Win32_Process -Filter "name='powershell.exe'"`
   filtered on `grep -q` + `wsl` in CommandLine), then shut down.
+
+### 2026-10-12 — Phase 0 resumed
+
+- GPU idle at start (0.5 GB used). OpenAI credits live (chat ping HTTP 200).
+  `HF_TOKEN`, `WANDB_API_KEY`, `OPENAI_API_KEY` were saved in the app's
+  `.env`; copied by name into `rag-finetune/.env` (gitignored). The app's
+  copy was left in place.
+- **gpt-4o-mini through `ragft.client` works** (`scripts/smoke_serve.py
+  --openai --all`, output `outputs/smoke/serve-gpt4omini.json`): 2 of 3
+  golden prompts pass. The failure is informative, not a harness bug: on the
+  two-document prompt gpt-4o-mini wrapped both quotes in double quotes
+  (`— "Every Aurora…"`), so the app's verbatim check marks them invalid.
+  Record this as the first baseline observation for Phase 2 (strict vs
+  lenient citation precision). TTFT 0.5 to 1.0 s, 1.0 to 1.3 s total.
+- `npm run eval` (HNSW gate) failed before reaching OpenAI:
+  Supabase pooler answered `tenant/user postgres.<ref> not found`. Diagnosing
+  (likely the free-tier project was paused after three idle weeks).
+- **Database unreachable, user action needed.** Both `DATABASE_URL` (pooler
+  :6543) and `DIRECT_URL` (pooler :5432) return
+  `(ENOTFOUND) tenant/user postgres.rcmwbfirmelhbnokqiuu not found` from
+  `aws-1-us-west-1.pooler.supabase.com`. That is Supavisor saying the project
+  does not exist on that pooler: a free-tier project paused after inactivity
+  (last verified 2026-09-21), or deleted. Fix: restore the project in the
+  Supabase dashboard, then re-run `npm run eval`. If the project was
+  recreated instead, the URLs, password and the Aurora upload all need
+  redoing. Blocks: HNSW gate, `npm run eval:generation`, in-app end-to-end
+  check (Phase 0 step 7), Phase 5. Does not block Phase 0 GPU steps or
+  Phase 1 corpus work.
+- **vLLM first start failed** (`~/vllm.log`): weights loaded (9.3 GB on GPU,
+  FlashAttention 2 backend chosen), then torch inductor failed during the
+  compile phase of memory profiling. The visible exception,
+  `PermissionError: [Errno 13] Permission denied: 'nvcc'`, is a red herring:
+  there is no nvcc, and Python reports PermissionError instead of
+  FileNotFoundError because WSL appends Windows PATH entries that include an
+  unreadable `systemprofile` folder. That call happens while inductor writes
+  a crash repro, so the primary error is masked. Diagnosing with a minimal
+  `torch.compile` test under a PATH without `/mnt/` entries. Fallback if it
+  stays broken: `--enforce-eager` for the seam check (no torch.compile, no
+  CUDA graphs; latency numbers from that mode are not final).
+- Harness lesson (root cause of every quoting failure so far): `wsl.exe --`
+  runs the rest of the line through the Linux login shell before `bash -c`
+  sees it, so `$VAR`, `$(...)` and inner double quotes get expanded or
+  stripped once too often. Ad-hoc diagnostics now go into a script file in
+  the scratchpad and run as `wsl.exe -d Ubuntu -- bash /mnt/c/.../script.sh`.
+- **vLLM second start, real cause found.** With Windows PATH entries
+  stripped, the masked error appeared: FlashInfer's JIT sampler needs
+  `nvcc` (`Could not find nvcc and default cuda_home='/usr/local/cuda'
+  doesn't exist`). The pip `nvidia-cuda-nvcc` 13.4 exists in the venv but
+  FlashInfer's bundled headers are 13.0, so pointing `CUDA_HOME` at it fails
+  with "CUDA compiler and CUDA toolkit headers are incompatible". Fix:
+  `VLLM_USE_FLASHINFER_SAMPLER=0` in `scripts/serve.sh` (PyTorch sampler;
+  torch.compile verified working separately). Later option if another JIT
+  needs nvcc: install a matching toolkit (apt or runfile) and set
+  `CUDA_HOME`.
+- Client defaults switched from `localhost` to `127.0.0.1`
+  (`ragft/client.py`, `scripts/smoke_serve.py`, `scripts/serve-bg.sh`): vLLM
+  binds IPv4 and Python may resolve localhost to `::1` first.

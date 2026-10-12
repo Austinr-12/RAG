@@ -12,7 +12,7 @@ set -uo pipefail
 LOG="$HOME/vllm.log"
 PORT="${VLLM_PORT:-8000}"
 KEY="${VLLM_API_KEY:-dev}"
-URL="http://localhost:$PORT/v1/models"
+URL="http://127.0.0.1:$PORT/v1/models"
 HERE="$(cd "$(dirname "$0")" && pwd)"
 
 probe() { curl -s -o /dev/null -w '%{http_code}' -H "Authorization: Bearer $KEY" "$URL" 2>/dev/null || true; }

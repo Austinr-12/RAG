@@ -74,9 +74,11 @@ on the 3060 answers a contract golden prompt with a valid citation through
 `ragft/client.py`; a smoke training run is logged. Item 7 completes the
 original exit the day credits arrive.
 
-**Needs the user:** about $20 of OpenAI credits on the same organization and
-project as the key in `.env`; a Hugging Face token and a W&B API key in
-`rag-finetune/.env`.
+**Needs the user (updated 2026-10-12):** OpenAI credits, HF token and W&B key
+are now in place. New blocker: the Supabase project is paused or gone (both
+pooler URLs answer `tenant not found`). Restore it in the Supabase dashboard;
+until then the HNSW gate, `npm run eval:generation` and the in-app check
+cannot run.
 
 **Timeline:** Phase 0 runs 2026-10-11 to 10-14. Starting Phase 1 corpus
 collection in parallel (it needs no API) keeps the finish near 2026-11-20.
