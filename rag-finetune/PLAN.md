@@ -4,26 +4,78 @@ Checked against `rag-knowledge-base` at commit `0602a12` on 2026-09-16.
 Every "code reality" claim below was read from the repo or from the installed
 packages in `node_modules`, not assumed.
 
-## Status (updated 2026-09-16)
+## Status (updated 2026-10-11)
 
-The app-side prep in section 8 is **done** and verified: provider switch,
-pinned sampling, citation spec, prompt contract with guards on both sides,
-corpus export, generation eval script, Aurora fixture restored, stale README
-references removed. `npm test` (90 tests), type check, lint and `next build`
-all pass. The custom-endpoint path was verified by streaming from a mock
-vLLM-style server through the real route code path.
+The app-side prep in section 8 is **done** and verified (2026-09-16): provider
+switch, pinned sampling, citation spec, prompt contract with guards on both
+sides, corpus export, generation eval script, Aurora fixture restored. Since
+then: Supabase DB password rotated 2026-09-21, WSL2 and Ubuntu installed.
 
-Still open before Phase 1:
+Machine state checked on 2026-10-11:
 
-- **OpenAI credits.** Re-checked twice on 2026-09-16: still
-  `429 You have no credits remaining`. If funds were added, check they went to
-  the same organization and project as the key in `.env`. Then run
-  `npm run eval` (HNSW regression gate, expect hybrid 1.000 / 0.944) and
-  `npm run eval:generation` (first gpt-4o-mini baseline).
-- **Supabase DB password rotation** (section 4, item 3).
-- **WSL2 + Python env** (section 4, item 4).
-- Optional `Message.model` column: not applied, it needs a migration against
-  the live database.
+- WSL 2.7.14 with Ubuntu 26.04.1 LTS registered, fresh and stopped. The
+  RTX 3060 12 GB is visible inside Ubuntu. Host driver 616.92 reports CUDA
+  13.4, so cu128 and cu130 wheels both work. Never install a Linux NVIDIA
+  driver inside WSL.
+- Ubuntu's Python is 3.14. vLLM 0.31 supports 3.10 to 3.13 and recommends
+  3.12, so the venv uses a uv-managed 3.12.
+- WSL sees 7 GB of the 15.8 GB host RAM. Needs `%USERPROFILE%\.wslconfig`
+  with memory 10 GB and a 24 GB swap file on D:.
+- The distro's disk image is on C:, which has 44 GB free. D: has 825 GB free.
+  Move the distro first: `wsl --shutdown` then
+  `wsl --manage Ubuntu --move D:\wsl\Ubuntu`.
+- OpenAI: still `429 credit_balance_exhausted` on a live check today. This
+  blocks the HNSW eval gate, the gpt-4o-mini baseline, OpenAI-teacher
+  generation and in-app embeddings. It does not block Phase 0 or
+  `npm run export:corpus`, which needs no network.
+
+Base model, re-verified 2026-10-11: Qwen3.5-4B has shipped under Apache 2.0,
+but it is a new hybrid architecture with a vision encoder and needs
+transformers and vLLM from `main`. It fails the "stable vLLM + TRL +
+bitsandbytes" item of the section 5 checklist. The headline base stays
+**Qwen3-4B-Instruct-2507** (text-only, non-thinking). Ablation sibling:
+Qwen3-1.7B with `enable_thinking=false` baked into the training template,
+fallback Qwen2.5-1.5B-Instruct. Re-check Qwen3.5-4B only if a stable vLLM
+release lists it before Phase 3 starts.
+
+### Phase 0 start sequence
+
+1. Windows: move the distro to D:, write `.wslconfig`, `wsl --shutdown`,
+   confirm `free -g` inside Ubuntu shows about 10 GB.
+2. Ubuntu: `apt` build tools, `uv`, Python 3.12. Venv at `~/.venvs/ragft` and
+   `HF_HOME=~/hf` on the Linux filesystem, because `/mnt/c` is slow. The code
+   stays in `/mnt/c/dev/RAG/rag-finetune` so the Windows IDE and git keep
+   working.
+3. `pyproject.toml` in `rag-finetune`: install `vllm` first (it pins torch),
+   then trl, peft, bitsandbytes, datasets, accelerate, wandb,
+   huggingface_hub, rank-bm25, openai, pytest. FlashAttention 2 is optional;
+   start with SDPA.
+4. Run `tests/test_contract.py` from the venv, plus a `torch.cuda` check.
+5. `ragft/client.py`: the one OpenAI-compatible chat client every later eval
+   uses. Prove it against
+   `vllm serve Qwen/Qwen3-4B-Instruct-2507 --served-model-name rag-grounded
+   --max-model-len 8192 --gpu-memory-utilization 0.9 --max-num-seqs 4
+   --api-key dev` by streaming a contract golden prompt through it. The reply
+   must pass `scan_citations`.
+6. `ragft/smoke_train.py`: 4-bit load, chat template printed, 50 SFT steps
+   with completion-only loss, one batch of masked labels printed, tokens per
+   second and peak VRAM logged to W&B. Run on the 4B and the 1.7B.
+7. When OpenAI credits land: `npm run eval` (HNSW gate, expect hybrid
+   1.000 / 0.944), then the in-app end-to-end check with `CHAT_BASE_URL`
+   pointing at vLLM.
+
+**Revised Phase 0 exit:** contract test green on Linux; the base model served
+on the 3060 answers a contract golden prompt with a valid citation through
+`ragft/client.py`; a smoke training run is logged. Item 7 completes the
+original exit the day credits arrive.
+
+**Needs the user:** about $20 of OpenAI credits on the same organization and
+project as the key in `.env`; a Hugging Face token and a W&B API key in
+`rag-finetune/.env`.
+
+**Timeline:** Phase 0 runs 2026-10-11 to 10-14. Starting Phase 1 corpus
+collection in parallel (it needs no API) keeps the finish near 2026-11-20.
+The original first-half-of-November target needs Phases 1 and 2 compressed.
 
 ## 1. Verdict
 
