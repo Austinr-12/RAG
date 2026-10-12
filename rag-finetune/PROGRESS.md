@@ -131,3 +131,10 @@ Conventions:
    and Phase 3 from them.
 6. Still needed from the user: OpenAI credits (about $20), `HF_TOKEN` and
    `WANDB_API_KEY` in `rag-finetune/.env`.
+- **Shutdown gotcha, fixed.** `wsl --shutdown` kept being undone within
+  seconds. Cause: the three `run_in_background` PowerShell wait loops from the
+  earlier session (install, download, smoke4b) outlived that session and kept
+  running `wsl -d Ubuntu -- grep ...` every 20 s, which boots the VM. Stopped
+  them by PID, then `wsl --shutdown` held. Lesson: before pausing, kill
+  leftover wait loops (`Get-CimInstance Win32_Process -Filter "name='powershell.exe'"`
+  filtered on `grep -q` + `wsl` in CommandLine), then shut down.
