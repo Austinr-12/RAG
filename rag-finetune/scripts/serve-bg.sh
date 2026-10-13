@@ -23,9 +23,9 @@ case "${1:-}" in
     pkill -f 'VLLM::EngineCore' 2>/dev/null || true
     exit 0 ;;
   --status)
-    code=$(probe); echo "http $code"; [[ "$code" == "200" ]] ;;
+    code=$(probe); echo "http $code"
+    [[ "$code" == "200" ]]; exit $? ;;
 esac
-[[ "${1:-}" == "--status" ]] && exit $?
 
 if [[ "$(probe)" == "200" ]]; then
   echo "already running"; echo READY; exit 0

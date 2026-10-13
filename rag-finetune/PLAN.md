@@ -40,9 +40,16 @@ release lists it before Phase 3 starts.
 
 ### Phase 0 start sequence
 
-**Progress 2026-10-11 evening:** steps 1 to 4 below are done (see
-`PROGRESS.md` for the step-by-step record and the resume checklist).
-Steps 5 and 6 wait for an idle GPU; step 7 waits for OpenAI credits.
+**Progress 2026-10-12:** steps 1 to 6 are done (see `PROGRESS.md` for the
+record). Step 7 waits for the Supabase project to be restored. Measured on
+the RTX 3060: vLLM serves the 4B in bf16 at 10.9 GB with torch.compile and
+CUDA graphs (FlashInfer sampler off, no CUDA toolkit in WSL); QLoRA r=16
+trains the 4B at about 600 tokens/s (3.4 GB peak) and the 1.7B at about
+1,300 tokens/s (1.8 GB peak). A 3,000-example epoch is about 2.8 h on the
+4B; 1,000-example ablations are about 25 min per epoch on the 1.7B. Zero-shot
+base model on the golden prompts: 1 of 2 answerable prompts cited validly,
+the other fabricated a quote; gpt-4o-mini: 1 of 2, the other wrapped quotes
+in quotation marks. Results in `results/smoke/`.
 
 
 1. Windows: move the distro to D:, write `.wslconfig`, `wsl --shutdown`,

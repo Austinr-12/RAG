@@ -1,0 +1,72 @@
+{
+  "contract_sha256": "943f4e1c9ac533ccdbf03420e20687a799b7b3a3a291982c7b3a1729ad816033",
+  "endpoint": {
+    "model": "rag-grounded",
+    "base_url": "http://127.0.0.1:8000/v1"
+  },
+  "results": [
+    {
+      "name": "two-documents-messy-whitespace",
+      "answerable": true,
+      "pass": false,
+      "scan": {
+        "citations": [
+          {
+            "documentName": "support-faq.txt",
+            "quote": "Answer: How long is the warranty and who do I call? Answer:",
+            "knownDocument": true,
+            "verbatim": false,
+            "withinLength": true,
+            "valid": false
+          }
+        ],
+        "malformedCount": 0
+      },
+      "text": "The warranty is one year from the date of purchase. You can call 1-800-287-6721 (Mon–Fri, 8am–8pm ET) for support.\n\n> **support-faq.txt** — Answer: How long is the warranty and who do I call? Answer:",
+      "ttft_s": 0.564277301000061,
+      "total_s": 2.5191785000000664,
+      "prompt_tokens": 351,
+      "completion_tokens": 69,
+      "finish_reason": "stop"
+    },
+    {
+      "name": "full-top-k-repeated-document",
+      "answerable": true,
+      "pass": true,
+      "scan": {
+        "citations": [
+          {
+            "documentName": "Aurora Notebook — Owner's Handbook",
+            "quote": "Aurora Notebook Pro (model code ANP-C3) — 16.2\" display, 64 GB RAM, 2 TB SSD, dedicated GPU. Starting price $2,899.",
+            "knownDocument": true,
+            "verbatim": true,
+            "withinLength": true,
+            "valid": true
+          }
+        ],
+        "malformedCount": 0
+      },
+      "text": "> **Aurora Notebook — Owner's Handbook** — Aurora Notebook Pro (model code ANP-C3) — 16.2\" display, 64 GB RAM, 2 TB SSD, dedicated GPU. Starting price $2,899.",
+      "ttft_s": 0.12086568399990938,
+      "total_s": 1.7162925650000034,
+      "prompt_tokens": 469,
+      "completion_tokens": 56,
+      "finish_reason": "stop"
+    },
+    {
+      "name": "no-sources",
+      "answerable": false,
+      "pass": true,
+      "scan": {
+        "citations": [],
+        "malformedCount": 0
+      },
+      "text": "The provided sources do not contain information about the capital of France.",
+      "ttft_s": 0.06557240500001171,
+      "total_s": 0.44012111999995795,
+      "prompt_tokens": 290,
+      "completion_tokens": 14,
+      "finish_reason": "stop"
+    }
+  ]
+}

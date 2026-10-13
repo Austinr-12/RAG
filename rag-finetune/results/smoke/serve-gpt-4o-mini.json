@@ -1,0 +1,80 @@
+{
+  "contract_sha256": "943f4e1c9ac533ccdbf03420e20687a799b7b3a3a291982c7b3a1729ad816033",
+  "endpoint": {
+    "model": "gpt-4o-mini",
+    "base_url": "https://api.openai.com/v1"
+  },
+  "results": [
+    {
+      "name": "two-documents-messy-whitespace",
+      "answerable": true,
+      "pass": false,
+      "scan": {
+        "citations": [
+          {
+            "documentName": "aurora-notebook-handbook.md",
+            "quote": "\"Every Aurora Notebook is covered by a one-year limited warranty from the date of purchase.\"",
+            "knownDocument": true,
+            "verbatim": false,
+            "withinLength": true,
+            "valid": false
+          },
+          {
+            "documentName": "support-faq.txt",
+            "quote": "\"Phone support: 1-800-287-6721 (Mon–Fri, 8am–8pm ET).\"",
+            "knownDocument": true,
+            "verbatim": false,
+            "withinLength": true,
+            "valid": false
+          }
+        ],
+        "malformedCount": 0
+      },
+      "text": "The warranty for every Aurora Notebook is one year from the date of purchase. For support, you can call 1-800-287-6721, available Monday to Friday from 8 am to 8 pm ET.\n> **aurora-notebook-handbook.md** — \"Every Aurora Notebook is covered by a one-year limited warranty from the date of purchase.\"\n> **support-faq.txt** — \"Phone support: 1-800-287-6721 (Mon–Fri, 8am–8pm ET).\"",
+      "ttft_s": 0.5141882859999924,
+      "total_s": 1.331929101,
+      "prompt_tokens": 331,
+      "completion_tokens": 108,
+      "finish_reason": "stop"
+    },
+    {
+      "name": "full-top-k-repeated-document",
+      "answerable": true,
+      "pass": true,
+      "scan": {
+        "citations": [
+          {
+            "documentName": "Aurora Notebook — Owner's Handbook",
+            "quote": "Starting price $2,899.",
+            "knownDocument": true,
+            "verbatim": true,
+            "withinLength": true,
+            "valid": true
+          }
+        ],
+        "malformedCount": 0
+      },
+      "text": "The starting price of the Aurora Notebook Pro model is $2,899.\n> **Aurora Notebook — Owner's Handbook** — Starting price $2,899.",
+      "ttft_s": 0.9800075929999963,
+      "total_s": 1.2494876229999932,
+      "prompt_tokens": 436,
+      "completion_tokens": 33,
+      "finish_reason": "stop"
+    },
+    {
+      "name": "no-sources",
+      "answerable": false,
+      "pass": true,
+      "scan": {
+        "citations": [],
+        "malformedCount": 0
+      },
+      "text": "The documents don't cover it.",
+      "ttft_s": 0.9208623610000046,
+      "total_s": 0.9934978240000021,
+      "prompt_tokens": 276,
+      "completion_tokens": 6,
+      "finish_reason": "stop"
+    }
+  ]
+}

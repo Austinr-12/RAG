@@ -195,3 +195,54 @@ Conventions:
 - Client defaults switched from `localhost` to `127.0.0.1`
   (`ragft/client.py`, `scripts/smoke_serve.py`, `scripts/serve-bg.sh`): vLLM
   binds IPv4 and Python may resolve localhost to `::1` first.
+- **Step 5 DONE: seam proven on the local GPU.** vLLM 0.31 serves
+  Qwen3-4B-Instruct-2507 as `rag-grounded` (bf16, 8k context, FlashAttention 2,
+  torch.compile + CUDA graphs, PyTorch sampler) using 10.9 GB of the 12 GB.
+  Startup from cold: about 3.5 min (1 min imports, 67 s weight load, compile).
+  `scripts/smoke_serve.py --all` through `ragft.client` against it
+  (`outputs/smoke/serve-base.json`): full-top-k prompt PASS with a verbatim
+  citation (TTFT 0.12 s, 1.7 s total); no-sources prompt PASS (abstains, no
+  citation); two-documents prompt FAIL because the base model fabricated a
+  quote ("Answer: How long is the warranty…") that is not in the source. That
+  failure is the training target, not a harness problem. For comparison,
+  gpt-4o-mini failed the two-documents prompt differently (quotation marks
+  around otherwise verbatim quotes).
+- Bug fixed in `scripts/serve-bg.sh --status`: it exited with the status of
+  the wrong test and always reported ready. Now exits 1 unless `/v1/models`
+  answers 200.
+- **Open item for Phase 3 (ablation model).** Qwen3-1.7B's chat template
+  renders an empty `<think>\n\n</think>` block inside the assistant turn of a
+  training example, while the plain generation prompt ends at
+  `<|im_start|>assistant\n` with no block (thinking on by default). Before
+  ablations: render training and serving with `enable_thinking=False` on
+  both sides (TRL `chat_template_kwargs` if supported, else pre-render), and
+  serve with `--chat-template-kwargs '{"enable_thinking": false}'` or
+  equivalent. The 4B Instruct-2507 has no think block and needs nothing.
+- Session wrap-up 2026-10-12 19:07: no vLLM or training process running,
+  GPU back to 0.5 GB. Uncommitted: `PROGRESS.md`, `scripts/serve-bg.sh`,
+  `scripts/smoke_train.py`, new `results/smoke/`.
+
+- **Step 6 DONE: training smoke tests pass on both models** (W&B project
+  `rag-finetune`, runs `smoke-Qwen3-4B-Instruct-2507-r16-s50` and
+  `smoke-Qwen3-1.7B-r16-s20`; summaries copied to `results/smoke/`).
+  TRL 1.15 fixes applied in `scripts/smoke_train.py`: `warmup_ratio` →
+  `warmup_steps`, `include_tokens_per_second` removed (tokens/s now derived
+  from `trainer.state.num_input_tokens_seen`).
+
+  | model | steps × accum | seq tokens | tok/s | peak VRAM | runtime |
+  |---|---|---|---|---|---|
+  | Qwen3-4B-Instruct-2507 (nf4, r=16) | 50 × 4 | ~1.5k | 598 | 3.4 GB | 485 s |
+  | Qwen3-1.7B (nf4, r=16) | 20 × 4 | ~1.5k | 1292 | 1.8 GB | 90 s |
+
+  Masking proof: supervised tokens are exactly the assistant completion
+  (4.4% of the toy sequence; real answers will be longer). Loss on the toy
+  set fell 2.03 → 0.03, which only shows the pipeline learns.
+- **Sizing from these numbers.** 3,000 examples at about 2k tokens each is
+  roughly 6M tokens per epoch: about 2.8 h per epoch for the 4B, 3 epochs in
+  under 9 h. 1,000-example ablations on the 1.7B are about 25 min per epoch.
+  VRAM headroom (8 GB unused) allows per-device batch 2 to 4, which should
+  raise throughput; try in Phase 3.
+- **Phase 0 exit reached except step 7.** Contract test green on Linux; the
+  base model served on the 3060 answers a golden prompt with a valid
+  citation through `ragft/client.py`; both smoke training runs logged to
+  W&B. Step 7 (HNSW gate, in-app check) waits for the Supabase project.

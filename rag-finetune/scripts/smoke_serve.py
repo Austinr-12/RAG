@@ -81,7 +81,10 @@ def main() -> int:
 
     if args.json:
         args.json.parent.mkdir(parents=True, exist_ok=True)
-        payload = {"contract_sha256": contract.sha256, "endpoint": endpoint.__dict__, "results": results}
+        # Why: never record the key. For OpenAI it is the real OPENAI_API_KEY, and
+        # GitHub push protection rightly rejects a commit that contains it.
+        endpoint_public = {"model": endpoint.model, "base_url": endpoint.base_url or "https://api.openai.com/v1"}
+        payload = {"contract_sha256": contract.sha256, "endpoint": endpoint_public, "results": results}
         args.json.write_text(json.dumps(payload, indent=2, ensure_ascii=False), encoding="utf-8")
         print(f"wrote {args.json}")
     print("ALL PASS" if failures == 0 else f"{failures} FAILED")

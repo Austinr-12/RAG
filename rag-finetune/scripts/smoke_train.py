@@ -138,7 +138,8 @@ def main() -> int:
         gradient_accumulation_steps=args.grad_accum,
         learning_rate=2e-4,
         lr_scheduler_type="cosine",
-        warmup_ratio=0.03,
+        # transformers 5 dropped warmup_ratio; 3% of the run as explicit steps.
+        warmup_steps=max(1, round(0.03 * args.steps)),
         bf16=True,
         gradient_checkpointing=True,
         logging_steps=5,
@@ -147,7 +148,6 @@ def main() -> int:
         max_length=args.max_seq_len,
         packing=False,
         completion_only_loss=True,
-        include_tokens_per_second=True,
         include_num_input_tokens_seen=True,
         dataloader_pin_memory=False,
         model_init_kwargs={
@@ -194,6 +194,11 @@ def main() -> int:
     metrics = dict(result.metrics)
     peak_alloc = torch.cuda.max_memory_allocated() / 2**30
     peak_res = torch.cuda.max_memory_reserved() / 2**30
+    # transformers 5 no longer reports train_tokens_per_second; derive it from
+    # the trainer's own token counter and the measured runtime.
+    tokens_seen = getattr(trainer.state, "num_input_tokens_seen", None) or metrics.get("num_input_tokens_seen")
+    runtime = metrics.get("train_runtime")
+    tokens_per_second = (tokens_seen / runtime) if tokens_seen and runtime else None
     summary = {
         "model": args.model,
         "contract_sha256": contract.sha256,
@@ -206,8 +211,8 @@ def main() -> int:
         "supervised_fraction_sample": n_sup / n_total,
         "wall_s": wall,
         "train_runtime_s": metrics.get("train_runtime"),
-        "train_tokens_per_second": metrics.get("train_tokens_per_second"),
-        "num_input_tokens_seen": metrics.get("num_input_tokens_seen"),
+        "train_tokens_per_second": tokens_per_second,
+        "num_input_tokens_seen": tokens_seen,
         "train_loss": metrics.get("train_loss"),
         "peak_vram_allocated_gb": round(peak_alloc, 2),
         "peak_vram_reserved_gb": round(peak_res, 2),

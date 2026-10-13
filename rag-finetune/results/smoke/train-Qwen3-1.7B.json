@@ -1,0 +1,19 @@
+{
+  "model": "Qwen/Qwen3-1.7B",
+  "contract_sha256": "943f4e1c9ac533ccdbf03420e20687a799b7b3a3a291982c7b3a1729ad816033",
+  "steps": 20,
+  "grad_accum": 4,
+  "effective_batch": 4,
+  "max_seq_len": 3072,
+  "lora_r": 16,
+  "sequence_tokens_sample": 1520,
+  "supervised_fraction_sample": 0.046052631578947366,
+  "wall_s": 90.34694355800002,
+  "train_runtime_s": 90.1522,
+  "train_tokens_per_second": 1292.2147213268229,
+  "num_input_tokens_seen": 116496,
+  "train_loss": 0.9558609336614609,
+  "peak_vram_allocated_gb": 1.81,
+  "peak_vram_reserved_gb": 2.22,
+  "gpu": "NVIDIA GeForce RTX 3060"
+}
