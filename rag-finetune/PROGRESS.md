@@ -246,3 +246,37 @@ Conventions:
   base model served on the 3060 answers a golden prompt with a valid
   citation through `ragft/client.py`; both smoke training runs logged to
   W&B. Step 7 (HNSW gate, in-app check) waits for the Supabase project.
+- **Push blocked by GitHub secret scanning, fixed 2026-10-12.** The commit
+  "more training setup" was rejected because
+  `results/smoke/serve-gpt-4o-mini.json` contained the real OpenAI key:
+  `smoke_serve.py` had written `endpoint.__dict__` into the JSON. Fix:
+  the script now records only `model` and `base_url`; the key was stripped
+  from the tracked and the `outputs/` copies; the unpushed commit was
+  amended (a new commit on top would have left the key in history and the
+  push would still fail) and pushed as `0124d42`. The key never reached the
+  remote. Rotating it is optional insurance.
+  Rule from now on: result files never carry credentials; check with
+  `git grep -c -E 'sk-[A-Za-z0-9_-]{20,}|hf_[A-Za-z0-9]{20,}' HEAD` before
+  pushing.
+- **Security hardening after the push block (2026-10-12).**
+  - Leaked commit `5efe88c` purged locally (`git reflog expire` + `gc`);
+    it no longer exists anywhere.
+  - Whole-history scan for key patterns (OpenAI, HF, AWS, GitHub tokens,
+    DB URLs with passwords): the only matches are placeholder database URLs
+    in `CREDENTIALS.md` and `.env.example`. No real secret in any commit.
+  - `.env` files confirmed untracked and ignored in both projects;
+    `outputs/` and `wandb/` ignored.
+  - Pre-commit hook added at `.githooks/pre-commit` (repo root) and
+    activated with `git config core.hooksPath .githooks`. It refuses any
+    staged file containing a key-shaped string and prints a masked hit.
+    Tested: fake key refused, clean file passes. On a fresh clone, run the
+    `git config` line once.
+  - `CREDENTIALS.md` status row updated: OpenAI key rotation recommended.
+  - Still the user's call: rotate the OpenAI key (recommended), then update
+    both `.env` files. Optional: enable secret scanning alerts in the GitHub
+    repo settings so a future leak also notifies by email.
+- **OpenAI key rotated by the user 2026-10-12, verified.** New key answers
+  200 from both `.env` files (the fine-tune copy was synced from the app's
+  file); the old key returns 401. `CREDENTIALS.md` row updated. Pre-commit
+  hook committed by the user; `core.hooksPath` is set. Supabase restore
+  still pending (their side was having trouble).

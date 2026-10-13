@@ -14,7 +14,7 @@ patterns=(
   'hf_[A-Za-z0-9]{20,}'                   # Hugging Face tokens
   'AKIA[0-9A-Z]{16}'                      # AWS access keys
   'ghp_[A-Za-z0-9]{30,}'                  # GitHub personal tokens
-  'postgres(ql)?://[^:/]+:[^@/]{6,}@'     # database URLs with a password
+  'postgres(ql)?://[^:/]+:[^@/<\[]{6,}@'  # database URLs with a password; <placeholder> and [placeholder] forms are allowed
   '(WANDB_API_KEY|OPENAI_API_KEY|HF_TOKEN|CLERK_SECRET_KEY)[[:space:]]*[=:][[:space:]]*["'"'"']?[A-Za-z0-9_-]{16,}'
 )
 regex=$(IFS='|'; echo "${patterns[*]}")
