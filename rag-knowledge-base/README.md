@@ -193,7 +193,7 @@ rag-knowledge-base/
 │  ├─ export-contract.ts              — writes contract/prompt-contract.json
 │  ├─ export-corpus.ts                — docs folder → chunks.jsonl via the app's own ingestion
 │  ├─ debug-retrieve.ts               — one-off top-K dump for a single query
-│  └─ test-chunker.ts, test-extract.ts — no-network smoke scripts
+│  └─ test-extract.ts                 — no-network PDF/.txt extraction smoke script
 ├─ contract/prompt-contract.json      — generated; what any answer model is given + must produce
 ├─ test-fixtures/                     — sample docs for ingestion + eval
 ├─ eval-results.md                    — checked-in eval artifact

@@ -60,6 +60,11 @@ class Contract:
         return self.raw["citation"]["maxQuoteChars"]
 
     @property
+    def quote_wrapper_pairs(self) -> list[tuple[str, str]]:
+        """Pairs of wrapping quotation marks the app removes before verifying."""
+        return [(o, c) for o, c in self.raw["citation"].get("quoteWrapperPairs", [])]
+
+    @property
     def top_k(self) -> int:
         return self.raw["retrieval"]["topK"]
 
@@ -133,6 +138,17 @@ def _flatten(text: str) -> str:
     return " ".join(text.split())
 
 
+def strip_wrapping_quotes(contract: Contract, quote: str) -> str:
+    """Mirror of stripWrappingQuotes: remove one pair of wrapping marks, if any."""
+    q = quote.strip()
+    if len(q) < 3:
+        return q
+    for open_, close in contract.quote_wrapper_pairs:
+        if q.startswith(open_) and q.endswith(close):
+            return q[len(open_) : len(q) - len(close)].strip()
+    return q
+
+
 def scan_citations(
     contract: Contract, reply: str, sources: Sequence[Mapping[str, str]]
 ) -> dict[str, Any]:
@@ -140,6 +156,8 @@ def scan_citations(
 
     ``sources`` items need ``documentName`` and either ``normalized`` or
     ``content``. Returns {"citations": [...verdicts], "malformedCount": int}.
+    ``verbatim`` (which gates ``valid``) is checked after removing one pair of
+    wrapping quotation marks; ``verbatimStrict`` is the same check without it.
     """
     pattern = contract.citation_pattern
     citations: list[dict[str, Any]] = []
@@ -153,11 +171,12 @@ def scan_citations(
             malformed += 1
             continue
         name, quote = match.group(1), match.group(2)
-        flat_quote = _flatten(quote)
         named = [s for s in sources if s["documentName"] == name]
-        verbatim = bool(flat_quote) and any(
-            flat_quote in _flatten(s.get("normalized") or s["content"]) for s in named
-        )
+        texts = [_flatten(s.get("normalized") or s["content"]) for s in named]
+        flat_strict = _flatten(quote)
+        flat_quote = _flatten(strip_wrapping_quotes(contract, quote))
+        verbatim_strict = bool(flat_strict) and any(flat_strict in t for t in texts)
+        verbatim = bool(flat_quote) and any(flat_quote in t for t in texts)
         within = len(flat_quote) <= contract.max_quote_chars
         citations.append(
             {
@@ -165,6 +184,7 @@ def scan_citations(
                 "quote": quote,
                 "knownDocument": bool(named),
                 "verbatim": verbatim,
+                "verbatimStrict": verbatim_strict,
                 "withinLength": within,
                 "valid": bool(named) and verbatim and within,
             }

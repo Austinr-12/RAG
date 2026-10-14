@@ -125,6 +125,46 @@ describe("verifyCitation", () => {
     ]);
     expect(v).toMatchObject({ verbatim: true, withinLength: false, valid: false });
   });
+
+  it("reports verbatimStrict=true when no wrapping quotes were involved", () => {
+    const v = verifyCitation(
+      { documentName: "handbook.md", quote: "a one-year limited warranty" },
+      sources,
+    );
+    expect(v).toMatchObject({ verbatim: true, verbatimStrict: true, valid: true });
+  });
+
+  it("accepts a verbatim quote wrapped in straight quotation marks, flagged as not strict", () => {
+    const v = verifyCitation(
+      { documentName: "handbook.md", quote: '"a one-year limited warranty"' },
+      sources,
+    );
+    expect(v).toMatchObject({ verbatim: true, verbatimStrict: false, valid: true });
+  });
+
+  it("accepts curly wrapping quotation marks", () => {
+    const v = verifyCitation(
+      { documentName: "handbook.md", quote: "“a one-year limited warranty”" },
+      sources,
+    );
+    expect(v).toMatchObject({ verbatim: true, verbatimStrict: false, valid: true });
+  });
+
+  it("does not strip an unmatched quotation mark", () => {
+    const v = verifyCitation(
+      { documentName: "handbook.md", quote: '"a one-year limited warranty' },
+      sources,
+    );
+    expect(v).toMatchObject({ verbatim: false, verbatimStrict: false, valid: false });
+  });
+
+  it("measures the length cap on the quote without its wrapping marks", () => {
+    const exact = "x".repeat(MAX_QUOTE_CHARS);
+    const v = verifyCitation({ documentName: "big.txt", quote: `"${exact}"` }, [
+      { documentName: "big.txt", content: exact },
+    ]);
+    expect(v).toMatchObject({ verbatim: true, withinLength: true, valid: true });
+  });
 });
 
 describe("spec consistency", () => {

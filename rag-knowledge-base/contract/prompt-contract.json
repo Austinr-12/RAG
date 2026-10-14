@@ -5,14 +5,40 @@
     "Message layout sent to the chat model: system = systemPrompt; the LATEST user turn = a rendered retrieval prompt (see goldenPrompts[].rendered); earlier user turns are the raw questions and earlier assistant turns are prior replies, unmodified.",
     "When a brand-new conversation retrieves zero chunks the app replies with noSourcesReply and never calls the model.",
     "Rendered prompts use sources[].normalized (whitespace flattened by the app). Consumers should use the normalized text as given instead of re-implementing the normalization.",
-    "A citation is valid when its line matches citation.linePattern, the document name exactly equals a source name in the prompt, the quote is a substring of that document's normalized text, and the quote is at most citation.maxQuoteChars long.",
+    "A citation is valid when its line matches citation.linePattern, the document name exactly equals a source name in the prompt, the quote (after removing one pair of wrapping quotation marks listed in citation.quoteWrapperPairs, then whitespace-normalized) is a substring of that document's normalized text, and that quote is at most citation.maxQuoteChars long. verbatimStrict is the same substring check without removing wrapping quotation marks; it is reported for metrics and does not affect validity.",
     "sha256 = SHA-256 (hex) of JSON.stringify of this object without the sha256 key, keys in file order."
   ],
   "systemPrompt": "You are a helpful research assistant answering questions about the user's uploaded documents.\n\nRULES:\n1. Answer ONLY from the provided sources. If the sources do not contain enough information to answer, say so plainly and do not guess.\n2. When you use a specific fact from a source, immediately follow the sentence with a markdown blockquote on its own line in this EXACT format:\n   > **{Document Name}** — {the exact quoted text from that source, ≤ 200 characters}\n3. Never invent document names or quotes. Only quote text that appears verbatim in the sources below.\n4. Prefer short, direct answers. Use bullet points when listing multiple items.\n5. If the user asks a follow-up that isn't covered by the sources, do not fall back to general knowledge — say the documents don't cover it.\n\nFormat example:\nThe Aurora Notebook Pro starts at $2,899 and includes a color-calibrated OLED panel.\n> **Aurora Notebook — Owner's Handbook** — Aurora Notebook Pro (model code ANP-C3) — 16.2\" display, 64 GB RAM, 2 TB SSD, dedicated GPU. Starting price $2,899.",
   "noSourcesReply": "I don't have anything about that in your uploaded documents. Try uploading a relevant file, or ask a different question.",
   "citation": {
     "linePattern": "^> \\*\\*(.+?)\\*\\* — (.+)$",
-    "maxQuoteChars": 200
+    "maxQuoteChars": 200,
+    "quoteWrapperPairs": [
+      [
+        "\"",
+        "\""
+      ],
+      [
+        "“",
+        "”"
+      ],
+      [
+        "‘",
+        "’"
+      ],
+      [
+        "'",
+        "'"
+      ],
+      [
+        "«",
+        "»"
+      ],
+      [
+        "„",
+        "“"
+      ]
+    ]
   },
   "chunking": {
     "chunkSize": 1000,
@@ -99,6 +125,7 @@
             "quote": "covered by a one-year limited warranty from the date of purchase",
             "knownDocument": true,
             "verbatim": true,
+            "verbatimStrict": true,
             "withinLength": true,
             "valid": true
           }
@@ -122,6 +149,7 @@
             "quote": "Aurora Notebook Pro (model code ANP-C3) — 16.2\" display",
             "knownDocument": true,
             "verbatim": true,
+            "verbatimStrict": true,
             "withinLength": true,
             "valid": true
           }
@@ -149,6 +177,7 @@
             "quote": "You can call support at 1-800-287-6721",
             "knownDocument": true,
             "verbatim": false,
+            "verbatimStrict": false,
             "withinLength": true,
             "valid": false
           },
@@ -157,6 +186,7 @@
             "quote": "Phone support: 1-800-287-6721",
             "knownDocument": true,
             "verbatim": false,
+            "verbatimStrict": false,
             "withinLength": true,
             "valid": false
           },
@@ -165,6 +195,7 @@
             "quote": "Phone support: 1-800-287-6721",
             "knownDocument": false,
             "verbatim": false,
+            "verbatimStrict": false,
             "withinLength": true,
             "valid": false
           },
@@ -173,8 +204,51 @@
             "quote": "Phone support: 1-800-287-6721",
             "knownDocument": true,
             "verbatim": true,
+            "verbatimStrict": true,
             "withinLength": true,
             "valid": true
+          }
+        ],
+        "malformedCount": 0
+      }
+    },
+    {
+      "name": "quote-wrapped-in-quotation-marks",
+      "reply": "The warranty lasts one year.\n> **aurora-notebook-handbook.md** — \"covered by a one-year limited warranty\"\n> **aurora-notebook-handbook.md** — “from the date of purchase”\n> **aurora-notebook-handbook.md** — \"covered by a one-year",
+      "sources": [
+        {
+          "documentName": "aurora-notebook-handbook.md",
+          "content": "Every Aurora Notebook is covered by a one-year limited warranty from the date of purchase."
+        }
+      ],
+      "expected": {
+        "citations": [
+          {
+            "documentName": "aurora-notebook-handbook.md",
+            "quote": "\"covered by a one-year limited warranty\"",
+            "knownDocument": true,
+            "verbatim": true,
+            "verbatimStrict": false,
+            "withinLength": true,
+            "valid": true
+          },
+          {
+            "documentName": "aurora-notebook-handbook.md",
+            "quote": "“from the date of purchase”",
+            "knownDocument": true,
+            "verbatim": true,
+            "verbatimStrict": false,
+            "withinLength": true,
+            "valid": true
+          },
+          {
+            "documentName": "aurora-notebook-handbook.md",
+            "quote": "\"covered by a one-year",
+            "knownDocument": true,
+            "verbatim": false,
+            "verbatimStrict": false,
+            "withinLength": true,
+            "valid": false
           }
         ],
         "malformedCount": 0
@@ -210,6 +284,7 @@
             "quote": "lorem ipsum lorem ipsum lorem ipsum lorem ipsum lorem ipsum lorem ipsum lorem ipsum lorem ipsum lorem ipsum lorem ipsum lorem ipsum lorem ipsum lorem ipsum lorem ipsum lorem ipsum lorem ipsum lorem ipsum lorem ipsum lorem ipsum lorem ipsum",
             "knownDocument": true,
             "verbatim": true,
+            "verbatimStrict": true,
             "withinLength": false,
             "valid": false
           }
@@ -232,5 +307,5 @@
       }
     }
   ],
-  "sha256": "943f4e1c9ac533ccdbf03420e20687a799b7b3a3a291982c7b3a1729ad816033"
+  "sha256": "00e407e90e90cac386c799ff360373dd7b820f3d4dfeee093ebad79d6b12ce19"
 }

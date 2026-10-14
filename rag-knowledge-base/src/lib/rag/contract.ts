@@ -3,6 +3,7 @@ import { CHUNK_OVERLAP, CHUNK_SIZE } from "@/lib/rag/chunking";
 import {
   CITATION_LINE_PATTERN,
   MAX_QUOTE_CHARS,
+  QUOTE_WRAPPER_PAIRS,
   extractCitations,
   verifyCitation,
   type CitationSource,
@@ -48,7 +49,12 @@ export type PromptContract = {
   description: string[];
   systemPrompt: string;
   noSourcesReply: string;
-  citation: { linePattern: string; maxQuoteChars: number };
+  citation: {
+    linePattern: string;
+    maxQuoteChars: number;
+    /** One pair of these wrapping marks is removed from a quote before verification. */
+    quoteWrapperPairs: Array<[string, string]>;
+  };
   chunking: { chunkSize: number; chunkOverlap: number };
   retrieval: { topK: number };
   generation: { temperature: number; maxOutputTokens: number };
@@ -68,6 +74,7 @@ export type PromptContract = {
         quote: string;
         knownDocument: boolean;
         verbatim: boolean;
+        verbatimStrict: boolean;
         withinLength: boolean;
         valid: boolean;
       }>;
@@ -82,7 +89,7 @@ const DESCRIPTION = [
   "Message layout sent to the chat model: system = systemPrompt; the LATEST user turn = a rendered retrieval prompt (see goldenPrompts[].rendered); earlier user turns are the raw questions and earlier assistant turns are prior replies, unmodified.",
   "When a brand-new conversation retrieves zero chunks the app replies with noSourcesReply and never calls the model.",
   "Rendered prompts use sources[].normalized (whitespace flattened by the app). Consumers should use the normalized text as given instead of re-implementing the normalization.",
-  "A citation is valid when its line matches citation.linePattern, the document name exactly equals a source name in the prompt, the quote is a substring of that document's normalized text, and the quote is at most citation.maxQuoteChars long.",
+  "A citation is valid when its line matches citation.linePattern, the document name exactly equals a source name in the prompt, the quote (after removing one pair of wrapping quotation marks listed in citation.quoteWrapperPairs, then whitespace-normalized) is a substring of that document's normalized text, and that quote is at most citation.maxQuoteChars long. verbatimStrict is the same substring check without removing wrapping quotation marks; it is reported for metrics and does not affect validity.",
   "sha256 = SHA-256 (hex) of JSON.stringify of this object without the sha256 key, keys in file order.",
 ];
 
@@ -200,6 +207,22 @@ const GOLDEN_CITATION_INPUTS: Array<{
     ],
   },
   {
+    name: "quote-wrapped-in-quotation-marks",
+    reply: [
+      "The warranty lasts one year.",
+      '> **aurora-notebook-handbook.md** — "covered by a one-year limited warranty"',
+      "> **aurora-notebook-handbook.md** — “from the date of purchase”",
+      '> **aurora-notebook-handbook.md** — "covered by a one-year',
+    ].join("\n"),
+    sources: [
+      {
+        documentName: "aurora-notebook-handbook.md",
+        content:
+          "Every Aurora Notebook is covered by a one-year limited warranty from the date of purchase.",
+      },
+    ],
+  },
+  {
     name: "malformed-lines",
     reply: [
       "The warranty lasts one year.",
@@ -235,6 +258,7 @@ export function buildContract(): PromptContract {
     citation: {
       linePattern: CITATION_LINE_PATTERN,
       maxQuoteChars: MAX_QUOTE_CHARS,
+      quoteWrapperPairs: QUOTE_WRAPPER_PAIRS.map(([open, close]) => [open, close] as [string, string]),
     },
     chunking: { chunkSize: CHUNK_SIZE, chunkOverlap: CHUNK_OVERLAP },
     retrieval: { topK: RETRIEVE_DEFAULT_K },

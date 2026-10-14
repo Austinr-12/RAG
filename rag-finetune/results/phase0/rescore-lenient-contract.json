@@ -1,0 +1,30 @@
+[
+  {
+    "file": "generation-gpt-4o-mini.jsonl",
+    "provider": "gpt-4o-mini",
+    "contract_sha256": "00e407e90e90cac386c799ff360373dd7b820f3d4dfeee093ebad79d6b12ce19",
+    "n": 11,
+    "format_compliant_pct": 100.0,
+    "citations": 11,
+    "citation_precision_lenient_pct": 45.45454545454545,
+    "citation_precision_strict_pct": 0.0,
+    "replies_with_valid_citation_pct": 45.45454545454545,
+    "replies_without_citation": 0,
+    "ttft_ms_median": 773,
+    "latency_ms_median": 1646
+  },
+  {
+    "file": "generation-vllm-qwen3-4b-base.jsonl",
+    "provider": "rag-grounded",
+    "contract_sha256": "00e407e90e90cac386c799ff360373dd7b820f3d4dfeee093ebad79d6b12ce19",
+    "n": 11,
+    "format_compliant_pct": 100.0,
+    "citations": 10,
+    "citation_precision_lenient_pct": 30.0,
+    "citation_precision_strict_pct": 30.0,
+    "replies_with_valid_citation_pct": 27.272727272727273,
+    "replies_without_citation": 1,
+    "ttft_ms_median": 347,
+    "latency_ms_median": 2091
+  }
+]

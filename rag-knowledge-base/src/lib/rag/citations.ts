@@ -10,6 +10,33 @@ import { normalizeChunkText } from "@/lib/rag/prompt";
 
 export const MAX_QUOTE_CHARS = 200;
 
+// Why: models often wrap the quoted text in quotation marks (gpt-4o-mini did it
+// on every answer of the 2026-10-13 in-app eval). The text inside is exact and
+// the UI renders both forms the same, so the verifier strips ONE pair of
+// wrapping quotation marks before the substring check. `verbatimStrict` keeps
+// the no-stripping verdict so evaluations can report both numbers. The pairs
+// are exported through the contract so the Python side applies the same list.
+export const QUOTE_WRAPPER_PAIRS: ReadonlyArray<readonly [string, string]> = [
+  ['"', '"'],
+  ["“", "”"], // “ ”
+  ["‘", "’"], // ‘ ’
+  ["'", "'"],
+  ["«", "»"], // « »
+  ["„", "“"], // „ “
+];
+
+/** Remove one pair of matching wrapping quotation marks, if present. */
+export function stripWrappingQuotes(quote: string): string {
+  const q = quote.trim();
+  if (q.length < 3) return q;
+  for (const [open, close] of QUOTE_WRAPPER_PAIRS) {
+    if (q.startsWith(open) && q.endsWith(close)) {
+      return q.slice(open.length, q.length - close.length).trim();
+    }
+  }
+  return q;
+}
+
 // Kept as a pattern STRING (not only a RegExp) so it can be exported verbatim
 // to non-JS consumers; the syntax is valid in both JS and Python `re`.
 // The name group is lazy and the match anchors on the closing `**` because a
@@ -57,8 +84,14 @@ export type CitationSource = { documentName: string; content: string };
 export type CitationVerdict = {
   /** The cited name exactly matches a document that was in the prompt. */
   knownDocument: boolean;
-  /** The quote appears verbatim in a chunk of THAT document, as prompted. */
+  /**
+   * The quote, after removing one pair of wrapping quotation marks, appears
+   * verbatim in a chunk of THAT document, as prompted. This is what `valid`
+   * uses.
+   */
   verbatim: boolean;
+  /** Same check without removing wrapping quotation marks. Reported, not gating. */
+  verbatimStrict: boolean;
   withinLength: boolean;
   valid: boolean;
 };
@@ -74,15 +107,18 @@ export function verifyCitation(
   sources: CitationSource[],
 ): CitationVerdict {
   const named = sources.filter((s) => s.documentName === citation.documentName);
-  const quote = normalizeChunkText(citation.quote);
+  const texts = named.map((s) => normalizeChunkText(s.content));
+  const strictQuote = normalizeChunkText(citation.quote);
+  const quote = normalizeChunkText(stripWrappingQuotes(citation.quote));
   const knownDocument = named.length > 0;
-  const verbatim =
-    quote.length > 0 &&
-    named.some((s) => normalizeChunkText(s.content).includes(quote));
+  const verbatimStrict =
+    strictQuote.length > 0 && texts.some((t) => t.includes(strictQuote));
+  const verbatim = quote.length > 0 && texts.some((t) => t.includes(quote));
   const withinLength = quote.length <= MAX_QUOTE_CHARS;
   return {
     knownDocument,
     verbatim,
+    verbatimStrict,
     withinLength,
     valid: knownDocument && verbatim && withinLength,
   };

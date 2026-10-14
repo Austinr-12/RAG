@@ -316,3 +316,47 @@ Conventions:
   the strict rule as a second metric. Nothing is trained yet, so the
   contract hash change costs nothing now and a lot later.
 - vLLM stopped; GPU free. Phase 1 (dataset) starts next.
+
+### 2026-10-13 (later) — lenient quote rule, cleanup, corpus start
+
+- **Decision taken: wrapping quotation marks are tolerated.** The app's
+  `verifyCitation` now strips one pair of wrapping marks (straight, curly,
+  guillemets; list exported as `citation.quoteWrapperPairs`) before the
+  substring check; `verbatimStrict` reports the old no-stripping verdict.
+  The Python mirror reads the pair list from the contract and reproduces the
+  verdicts; a new golden case `quote-wrapped-in-quotation-marks` guards
+  both sides. Checks: tsc clean, vitest 95/95, eslint clean, Python 5/5.
+  **Contract sha256 changed: `943f4e1c…` → `00e407e9…`.** No dataset or
+  model existed under the old hash, so nothing is invalidated.
+- `scripts/rescore.py` re-scores any eval-generation JSONL under the current
+  contract, no model calls. Phase 0 runs re-scored with q1 excluded (its
+  answer is in the system prompt example); table in
+  `results/phase0/rescore-lenient-contract.json`:
+
+  | metric | gpt-4o-mini | Qwen3-4B base |
+  |---|---|---|
+  | citation precision, lenient | 45.5% | 30.0% |
+  | citation precision, strict | 0.0% | 30.0% |
+  | replies with ≥1 valid citation | 45.5% | 27.3% |
+  | format-compliant | 100% | 100% |
+  | median TTFT | 773 ms | 347 ms |
+
+  Reading: after allowing quotation marks, gpt-4o-mini's remaining misses
+  are wrong document names (title instead of filename) and light
+  paraphrases; the base 4B's are mostly wrong names. Both are training
+  targets.
+- **Cleanup:** removed `rag-knowledge-base/scripts/test-chunker.ts`
+  (superseded by `chunking.test.ts`), the untracked generated
+  `scripts/fixtures/`, and local `outputs/smoke/` (tracked copies live in
+  `results/smoke/`). README tree updated. Kept: `test-extract.ts` (only
+  extraction check), `debug-retrieve.ts` (useful one-off), all tracking
+  docs. `.gitignore` now keeps `results/**/*.jsonl` so the Phase 0 JSONLs
+  are tracked (they were silently ignored before).
+- **Phase 1 corpus started.** `data/corpus-manifest.json` lists 16
+  libraries / 92 candidate documents with licenses and the selection
+  criteria; `scripts/fetch_corpus.py` downloads into `data/raw/` (ignored),
+  verifies PDF headers and text cleanliness, and writes
+  `data/raw/fetch-report.json`. Sources: IRS, NIST, Copyright Office, SSA,
+  OSHA, CFPB/FDIC/FTC/HUD, HHS/NIH, EPA/FEMA, USCIS (all public domain),
+  CPython tutorial (PSF), Rust book (MIT/Apache), Django docs (BSD),
+  Wikipedia via the extracts API (CC BY-SA 4.0), Project Gutenberg.

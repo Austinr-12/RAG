@@ -56,6 +56,8 @@ describe("prompt contract", () => {
     expect(verdicts.some((v) => v.knownDocument && !v.verbatim)).toBe(true);
     expect(verdicts.some((v) => !v.knownDocument)).toBe(true);
     expect(verdicts.some((v) => v.verbatim && !v.withinLength)).toBe(true);
+    expect(verdicts.some((v) => v.valid && !v.verbatimStrict)).toBe(true);
+    expect(verdicts.some((v) => v.valid && v.verbatimStrict)).toBe(true);
     expect(all.some((g) => g.expected.malformedCount > 0)).toBe(true);
     expect(
       all.some(

@@ -19,11 +19,14 @@ checkpoints/
 *.gguf
 *.pt
 
-# Data: raw sources and generated sets live on the HF Hub, not in git
+# Data: raw sources and generated sets live on the HF Hub, not in git.
+# The manifest (data/corpus-manifest.json) IS tracked: it is the recipe.
 data/raw/
 data/generated/
 *.jsonl
 !tests/fixtures/*.jsonl
+# Evaluation results are tracked on purpose: they are the project's record.
+!results/**/*.jsonl
 
 # Editable install metadata and local logs
 *.egg-info/
