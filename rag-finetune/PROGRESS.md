@@ -280,3 +280,39 @@ Conventions:
   file); the old key returns 401. `CREDENTIALS.md` row updated. Pre-commit
   hook committed by the user; `core.hooksPath` is set. Supabase restore
   still pending (their side was having trouble).
+
+### 2026-10-13 — Phase 0 step 7 done, Phase 0 complete
+
+- Supabase project restored by the user. The restore invalidated the DB
+  password; the user reset it. Connection still failed with `28P01` because
+  the new password contains a literal `%` followed by two hex characters,
+  which URL clients decode. Fixed by writing `%` as `%25` in both URLs (the
+  rewrite printed only character counts). `CREDENTIALS.md` row updated with
+  the rule: percent-encode every password character outside `A-Za-z0-9-._~`.
+  Data intact: 1 document, 10 chunks.
+- **Retrieval gate passed:** `npm run eval` hybrid-rrf hit@5 1.000, MRR
+  0.944, identical to the pre-index baseline. Dense-only 0.917 / 0.861.
+- **In-app generation eval, 12 Aurora questions, real hybrid retrieval**
+  (`results/phase0/`):
+
+  | provider | format OK | citations verified | replies with a valid cite | median TTFT | median total |
+  |---|---|---|---|---|---|
+  | gpt-4o-mini | 100% | 0/12 | 0% | 868 ms | 1658 ms |
+  | Qwen3-4B-Instruct-2507 base via vLLM | 100% | 3/11 | 25% | 347 ms | 2282 ms |
+
+  Failure modes read from the JSONL: gpt-4o-mini wraps every quote in
+  straight double quotes, so the strict verbatim rule fails all of them even
+  though the text is exact. The base 4B copies text verbatim but cites the
+  wrong document name on many answers (it reuses the title from the system
+  prompt's format example instead of the filename), and q1's answer is in
+  that example, as the plan predicted. The Windows app reaches the WSL vLLM
+  on localhost; the custom provider path works end to end with zero UI
+  changes.
+- **Decision needed before Phase 1 (user):** should the app's citation
+  verifier tolerate one pair of wrapping quotation marks around the quote?
+  Recommendation: yes, strip straight or curly wrapping quotes before the
+  substring check and re-export the contract. It keeps the comparison honest
+  (gpt-4o-mini's quotes are exact) and the fine-tune is still measured on
+  the strict rule as a second metric. Nothing is trained yet, so the
+  contract hash change costs nothing now and a lot later.
+- vLLM stopped; GPU free. Phase 1 (dataset) starts next.

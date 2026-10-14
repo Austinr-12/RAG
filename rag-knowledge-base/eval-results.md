@@ -4,7 +4,7 @@
 
 | Strategy | n | hit@K | MRR | mean top-1 sim |
 | --- | --- | --- | --- | --- |
-| dense-only | 12 | 0.917 | 0.861 | 0.537 |
+| dense-only | 12 | 0.917 | 0.861 | 0.538 |
 | hybrid-rrf | 12 | 1.000 | 0.944 | 0.531 |
 
 ## Per-question rank of first relevant chunk

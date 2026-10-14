@@ -40,8 +40,12 @@ release lists it before Phase 3 starts.
 
 ### Phase 0 start sequence
 
-**Progress 2026-10-12:** steps 1 to 6 are done (see `PROGRESS.md` for the
-record). Step 7 waits for the Supabase project to be restored. Measured on
+**Phase 0 complete 2026-10-13** (see `PROGRESS.md` for the record). The app
+answers from the local vLLM base model with zero UI changes; the retrieval
+gate matches its baseline (hybrid 1.000 / 0.944). In-app on the 12 Aurora
+questions: gpt-4o-mini 0/12 valid citations (wraps quotes in quotation
+marks), base 4B 3/11 (wrong document names). Open decision before Phase 1:
+make the app's verifier tolerate wrapping quotation marks (recommended). Measured on
 the RTX 3060: vLLM serves the 4B in bf16 at 10.9 GB with torch.compile and
 CUDA graphs (FlashInfer sampler off, no CUDA toolkit in WSL); QLoRA r=16
 trains the 4B at about 600 tokens/s (3.4 GB peak) and the 1.7B at about

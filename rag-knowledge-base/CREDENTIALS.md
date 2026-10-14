@@ -11,7 +11,7 @@
 | `OPENAI_API_KEY` | ✅ **Rotated 2026-10-12.** New key verified working (chat completion 200) from both `rag-knowledge-base/.env` and `rag-finetune/.env`; the old key returns 401. Why: on 2026-10-12 the previous key landed in a local commit via a smoke-test result file. GitHub push protection rejected the push, the commit was amended and purged, so it never reached the remote. A pre-commit hook (`.githooks/pre-commit`) now refuses key-shaped strings. |
 | `CLERK_SECRET_KEY` | ✅ **Rotated 2026-09-10.** New key verified working (Clerk API 200). |
 | `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` | Unchanged — doesn't auto-rotate and ships to browsers by design. |
-| `DATABASE_URL` / `DIRECT_URL` password | ✅ **Rotated 2026-09-21.** Verified: pooled + direct connections OK, data and HNSW/GIN indexes intact, `prisma migrate status` clean (Postgres 17.6). Gotcha hit during rotation: the generated password contained `#`, which must be written as `%23` in the URL or the port fails to parse. |
+| `DATABASE_URL` / `DIRECT_URL` password | ✅ **Reset 2026-10-13** after the Supabase project was restored from a pause (the restore invalidated the 2026-09-21 password). Verified: pooled + direct connections OK, 1 document / 10 chunks intact. Gotchas: a `#` in the password must be written `%23`; a literal `%` must be written `%25`, otherwise clients decode it and authentication fails with `28P01`. Rule: every character outside `A-Za-z0-9-._~` in the password gets percent-encoded. |
 
 ## Why this matters
 
