@@ -360,3 +360,42 @@ Conventions:
   OSHA, CFPB/FDIC/FTC/HUD, HHS/NIH, EPA/FEMA, USCIS (all public domain),
   CPython tutorial (PSF), Rust book (MIT/Apache), Django docs (BSD),
   Wikipedia via the extracts API (CC BY-SA 4.0), Project Gutenberg.
+- **Phase 1 corpus collected (2026-10-13).** `scripts/fetch_corpus.py`
+  (parallel, resumable, browser-style user agent, splits over-long texts
+  into `-partNofM` files the way a user would upload them) fetched
+  **101/101 manifest entries, 0 failures**: 78 MB, 45 PDFs. The app's own
+  ingestion (`npm run export:corpus`) produced **12,735 chunks from 104
+  files** in **16 libraries**; `scripts/corpus_stats.py` writes
+  `results/phase1/corpus-report.md` (101/104 pass every heuristic; the 3
+  flagged PDFs are real content with sidebars, a menu table and an address
+  appendix, kept on purpose as realistic uploads).
+
+  | library | docs | PDFs | chunks |
+  |---|---|---|---|
+  | tax-help (IRS) | 7 | 7 | 1869 |
+  | security-standards (NIST) | 7 | 7 | 1827 |
+  | classic-books (Gutenberg) | 6 | 0 | 1753 |
+  | workplace-safety (OSHA) | 7 | 7 | 893 |
+  | wikipedia-history / -science / -technology | 7 / 7 / 7 | 0 | 755 / 683 / 582 |
+  | money-and-home (CFPB, Federal Reserve) | 5 | 5 | 661 |
+  | health-guides (NHLBI) | 4 | 4 | 506 |
+  | earth-and-space (USGS, NASA) | 4 | 4 | 313 |
+  | python-tutorial (PSF) | 8 | 0 | 309 |
+  | django-docs (BSD) | 7 | 0 | 273 |
+  | us-founding-documents (Gutenberg, Federalist in 4 parts) | 6 (9 files) | 0 | ~700 |
+  | rust-book (MIT/Apache) | 8 | 0 | 195 |
+  | copyright-office | 7 | 7 | 138 |
+  | home-hazards (EPA) | 4 | 4 | 133 |
+
+  Dropped, recorded under `dropped_sources` in the manifest: SSA, USCIS,
+  FEMA and CFPB files (hosts block scripted downloads with 403 even with a
+  browser agent), four wrong URLs (404), and two HHS guides over the app's
+  10 MB upload limit. Selection criteria are written in the manifest.
+- **Next (Phase 1 continued):** build retrieval contexts per library with
+  BM25 (gold chunk + plausible same-library neighbours, hard negatives with
+  the gold and its overlapping neighbours removed), generate questions and
+  grounded answers with gpt-4o-mini as teacher, run the filter chain with
+  logged rejection rates (format, document name, verbatim under the new
+  lenient rule, length, gold-cited, abstention correctness, dedup, second
+  teacher check on negatives), split by library, push to the HF Hub with the
+  contract hash `00e407e9…` in the card.

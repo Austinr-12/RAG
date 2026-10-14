@@ -13,141 +13,1022 @@
     "tax-help": "IRS publications a household would keep together",
     "security-standards": "NIST guidance a security team would store",
     "copyright-office": "US Copyright Office circulars",
-    "social-security": "SSA benefit booklets",
     "workplace-safety": "OSHA guides for a safety manager",
     "money-and-home": "Consumer finance guides from CFPB and partners",
     "health-guides": "Federal nutrition, activity and heart-health guides",
     "home-hazards": "EPA and FEMA household safety guides",
-    "immigration-civics": "USCIS naturalization materials",
     "python-tutorial": "CPython official tutorial chapters (reStructuredText)",
     "rust-book": "The Rust Programming Language, selected chapters (markdown)",
     "django-docs": "Django documentation, tutorial and topic guides (reStructuredText as text)",
     "wikipedia-history": "Wikipedia articles, history and exploration",
     "wikipedia-science": "Wikipedia articles, natural science",
     "wikipedia-technology": "Wikipedia articles, technology and computing",
-    "classic-books": "Short public-domain books from Project Gutenberg"
+    "classic-books": "Short public-domain books from Project Gutenberg",
+    "us-founding-documents": "US founding documents and famous addresses (Project Gutenberg)",
+    "earth-and-space": "Earth science and space exploration (USGS, NASA)"
   },
   "documents": [
-    { "id": "irs-p501", "library": "tax-help", "title": "IRS Publication 501: Dependents, Standard Deduction, and Filing Information", "kind": "pdf", "url": "https://www.irs.gov/pub/irs-pdf/p501.pdf", "filename": "irs-publication-501-dependents-standard-deduction.pdf", "license": "Public domain (US government work)" },
-    { "id": "irs-p970", "library": "tax-help", "title": "IRS Publication 970: Tax Benefits for Education", "kind": "pdf", "url": "https://www.irs.gov/pub/irs-pdf/p970.pdf", "filename": "irs-publication-970-tax-benefits-for-education.pdf", "license": "Public domain (US government work)" },
-    { "id": "irs-p523", "library": "tax-help", "title": "IRS Publication 523: Selling Your Home", "kind": "pdf", "url": "https://www.irs.gov/pub/irs-pdf/p523.pdf", "filename": "irs-publication-523-selling-your-home.pdf", "license": "Public domain (US government work)" },
-    { "id": "irs-p590a", "library": "tax-help", "title": "IRS Publication 590-A: Contributions to Individual Retirement Arrangements", "kind": "pdf", "url": "https://www.irs.gov/pub/irs-pdf/p590a.pdf", "filename": "irs-publication-590a-ira-contributions.pdf", "license": "Public domain (US government work)" },
-    { "id": "irs-p936", "library": "tax-help", "title": "IRS Publication 936: Home Mortgage Interest Deduction", "kind": "pdf", "url": "https://www.irs.gov/pub/irs-pdf/p936.pdf", "filename": "irs-publication-936-home-mortgage-interest.pdf", "license": "Public domain (US government work)" },
-    { "id": "irs-p502", "library": "tax-help", "title": "IRS Publication 502: Medical and Dental Expenses", "kind": "pdf", "url": "https://www.irs.gov/pub/irs-pdf/p502.pdf", "filename": "irs-publication-502-medical-and-dental-expenses.pdf", "license": "Public domain (US government work)" },
-    { "id": "irs-p463", "library": "tax-help", "title": "IRS Publication 463: Travel, Gift, and Car Expenses", "kind": "pdf", "url": "https://www.irs.gov/pub/irs-pdf/p463.pdf", "filename": "irs-publication-463-travel-gift-car-expenses.pdf", "license": "Public domain (US government work)" },
-
-    { "id": "nist-sp800-61r2", "library": "security-standards", "title": "NIST SP 800-61 Rev. 2: Computer Security Incident Handling Guide", "kind": "pdf", "url": "https://nvlpubs.nist.gov/nistpubs/SpecialPublications/NIST.SP.800-61r2.pdf", "filename": "nist-sp-800-61r2-incident-handling-guide.pdf", "license": "Public domain (US government work)" },
-    { "id": "nist-sp800-63-3", "library": "security-standards", "title": "NIST SP 800-63-3: Digital Identity Guidelines", "kind": "pdf", "url": "https://nvlpubs.nist.gov/nistpubs/SpecialPublications/NIST.SP.800-63-3.pdf", "filename": "nist-sp-800-63-3-digital-identity-guidelines.pdf", "license": "Public domain (US government work)" },
-    { "id": "nist-sp800-207", "library": "security-standards", "title": "NIST SP 800-207: Zero Trust Architecture", "kind": "pdf", "url": "https://nvlpubs.nist.gov/nistpubs/SpecialPublications/NIST.SP.800-207.pdf", "filename": "nist-sp-800-207-zero-trust-architecture.pdf", "license": "Public domain (US government work)" },
-    { "id": "nist-sp800-88r1", "library": "security-standards", "title": "NIST SP 800-88 Rev. 1: Guidelines for Media Sanitization", "kind": "pdf", "url": "https://nvlpubs.nist.gov/nistpubs/SpecialPublications/NIST.SP.800-88r1.pdf", "filename": "nist-sp-800-88r1-media-sanitization.pdf", "license": "Public domain (US government work)" },
-    { "id": "nist-cswp-29", "library": "security-standards", "title": "NIST Cybersecurity Framework (CSF) 2.0", "kind": "pdf", "url": "https://nvlpubs.nist.gov/nistpubs/CSWP/NIST.CSWP.29.pdf", "filename": "nist-cswp-29-cybersecurity-framework-2.pdf", "license": "Public domain (US government work)" },
-    { "id": "nist-sp800-30r1", "library": "security-standards", "title": "NIST SP 800-30 Rev. 1: Guide for Conducting Risk Assessments", "kind": "pdf", "url": "https://nvlpubs.nist.gov/nistpubs/Legacy/SP/nistspecialpublication800-30r1.pdf", "filename": "nist-sp-800-30r1-risk-assessments.pdf", "license": "Public domain (US government work)" },
-    { "id": "nist-sp800-171r2", "library": "security-standards", "title": "NIST SP 800-171 Rev. 2: Protecting Controlled Unclassified Information", "kind": "pdf", "url": "https://nvlpubs.nist.gov/nistpubs/SpecialPublications/NIST.SP.800-171r2.pdf", "filename": "nist-sp-800-171r2-protecting-cui.pdf", "license": "Public domain (US government work)" },
-
-    { "id": "circ01", "library": "copyright-office", "title": "Copyright Office Circular 1: Copyright Basics", "kind": "pdf", "url": "https://www.copyright.gov/circs/circ01.pdf", "filename": "copyright-circular-01-copyright-basics.pdf", "license": "Public domain (US government work)" },
-    { "id": "circ02", "library": "copyright-office", "title": "Copyright Office Circular 2: Copyright Registration", "kind": "pdf", "url": "https://www.copyright.gov/circs/circ02.pdf", "filename": "copyright-circular-02-copyright-registration.pdf", "license": "Public domain (US government work)" },
-    { "id": "circ03", "library": "copyright-office", "title": "Copyright Office Circular 3: Copyright Notice", "kind": "pdf", "url": "https://www.copyright.gov/circs/circ03.pdf", "filename": "copyright-circular-03-copyright-notice.pdf", "license": "Public domain (US government work)" },
-    { "id": "circ09", "library": "copyright-office", "title": "Copyright Office Circular 9: Works Made for Hire", "kind": "pdf", "url": "https://www.copyright.gov/circs/circ09.pdf", "filename": "copyright-circular-09-works-made-for-hire.pdf", "license": "Public domain (US government work)" },
-    { "id": "circ14", "library": "copyright-office", "title": "Copyright Office Circular 14: Copyright in Derivative Works and Compilations", "kind": "pdf", "url": "https://www.copyright.gov/circs/circ14.pdf", "filename": "copyright-circular-14-derivative-works.pdf", "license": "Public domain (US government work)" },
-    { "id": "circ15a", "library": "copyright-office", "title": "Copyright Office Circular 15A: Duration of Copyright", "kind": "pdf", "url": "https://www.copyright.gov/circs/circ15a.pdf", "filename": "copyright-circular-15a-duration-of-copyright.pdf", "license": "Public domain (US government work)" },
-    { "id": "circ33", "library": "copyright-office", "title": "Copyright Office Circular 33: Works Not Protected by Copyright", "kind": "pdf", "url": "https://www.copyright.gov/circs/circ33.pdf", "filename": "copyright-circular-33-works-not-protected.pdf", "license": "Public domain (US government work)" },
-
-    { "id": "ssa-10035", "library": "social-security", "title": "SSA: Retirement Benefits", "kind": "pdf", "url": "https://www.ssa.gov/pubs/EN-05-10035.pdf", "filename": "ssa-05-10035-retirement-benefits.pdf", "license": "Public domain (US government work)" },
-    { "id": "ssa-10024", "library": "social-security", "title": "SSA: Understanding the Benefits", "kind": "pdf", "url": "https://www.ssa.gov/pubs/EN-05-10024.pdf", "filename": "ssa-05-10024-understanding-the-benefits.pdf", "license": "Public domain (US government work)" },
-    { "id": "ssa-10029", "library": "social-security", "title": "SSA: Disability Benefits", "kind": "pdf", "url": "https://www.ssa.gov/pubs/EN-05-10029.pdf", "filename": "ssa-05-10029-disability-benefits.pdf", "license": "Public domain (US government work)" },
-    { "id": "ssa-10084", "library": "social-security", "title": "SSA: Survivors Benefits", "kind": "pdf", "url": "https://www.ssa.gov/pubs/EN-05-10084.pdf", "filename": "ssa-05-10084-survivors-benefits.pdf", "license": "Public domain (US government work)" },
-    { "id": "ssa-10043", "library": "social-security", "title": "SSA: Medicare", "kind": "pdf", "url": "https://www.ssa.gov/pubs/EN-05-10043.pdf", "filename": "ssa-05-10043-medicare.pdf", "license": "Public domain (US government work)" },
-    { "id": "ssa-10069", "library": "social-security", "title": "SSA: How Work Affects Your Benefits", "kind": "pdf", "url": "https://www.ssa.gov/pubs/EN-05-10069.pdf", "filename": "ssa-05-10069-how-work-affects-benefits.pdf", "license": "Public domain (US government work)" },
-
-    { "id": "osha-3151", "library": "workplace-safety", "title": "OSHA 3151: Personal Protective Equipment", "kind": "pdf", "url": "https://www.osha.gov/sites/default/files/publications/osha3151.pdf", "filename": "osha-3151-personal-protective-equipment.pdf", "license": "Public domain (US government work)" },
-    { "id": "osha-3071", "library": "workplace-safety", "title": "OSHA 3071: Job Hazard Analysis", "kind": "pdf", "url": "https://www.osha.gov/sites/default/files/publications/osha3071.pdf", "filename": "osha-3071-job-hazard-analysis.pdf", "license": "Public domain (US government work)" },
-    { "id": "osha-3021", "library": "workplace-safety", "title": "OSHA 3021: Workers' Rights", "kind": "pdf", "url": "https://www.osha.gov/sites/default/files/publications/osha3021.pdf", "filename": "osha-3021-workers-rights.pdf", "license": "Public domain (US government work)" },
-    { "id": "osha-3170", "library": "workplace-safety", "title": "OSHA 3170: Safeguarding Equipment and Protecting Employees from Amputations", "kind": "pdf", "url": "https://www.osha.gov/sites/default/files/publications/osha3170.pdf", "filename": "osha-3170-safeguarding-equipment.pdf", "license": "Public domain (US government work)" },
-    { "id": "osha-3084", "library": "workplace-safety", "title": "OSHA 3084: Principal Emergency Response and Preparedness Requirements", "kind": "pdf", "url": "https://www.osha.gov/sites/default/files/publications/osha3122.pdf", "filename": "osha-3122-principal-emergency-response.pdf", "license": "Public domain (US government work)" },
-    { "id": "osha-3088", "library": "workplace-safety", "title": "OSHA 3088: How to Plan for Workplace Emergencies and Evacuations", "kind": "pdf", "url": "https://www.osha.gov/sites/default/files/publications/osha3088.pdf", "filename": "osha-3088-workplace-emergencies-evacuations.pdf", "license": "Public domain (US government work)" },
-    { "id": "osha-3990", "library": "workplace-safety", "title": "OSHA 3302: Small Business Safety and Health Handbook", "kind": "pdf", "url": "https://www.osha.gov/sites/default/files/publications/small-business.pdf", "filename": "osha-small-business-safety-handbook.pdf", "license": "Public domain (US government work)" },
-
-    { "id": "cfpb-home-loan-toolkit", "library": "money-and-home", "title": "CFPB: Your Home Loan Toolkit", "kind": "pdf", "url": "https://files.consumerfinance.gov/f/201503_cfpb_your-home-loan-toolkit-web.pdf", "filename": "cfpb-your-home-loan-toolkit.pdf", "license": "Public domain (US government work)" },
-    { "id": "cfpb-ymyg", "library": "money-and-home", "title": "CFPB: Your Money, Your Goals toolkit", "kind": "pdf", "url": "https://files.consumerfinance.gov/f/documents/cfpb_ymyg_toolkit.pdf", "filename": "cfpb-your-money-your-goals-toolkit.pdf", "license": "Public domain (US government work)" },
-    { "id": "cfpb-managing-someone-money", "library": "money-and-home", "title": "CFPB: Managing Someone Else's Money, Help for agents under a power of attorney", "kind": "pdf", "url": "https://files.consumerfinance.gov/f/documents/cfpb_msem_power-of-attorney_2019-10.pdf", "filename": "cfpb-managing-someone-elses-money-poa.pdf", "license": "Public domain (US government work)" },
-    { "id": "fdic-money-smart-bank", "library": "money-and-home", "title": "FDIC: Money Smart, Bank On It", "kind": "pdf", "url": "https://www.fdic.gov/sites/default/files/2024-03/money-smart-for-adults-module-1-your-money-values-and-influences-participant-guide.pdf", "filename": "fdic-money-smart-module-1-participant-guide.pdf", "license": "Public domain (US government work)" },
-    { "id": "ftc-identity-theft", "library": "money-and-home", "title": "FTC: Identity Theft, A Recovery Plan", "kind": "pdf", "url": "https://www.consumer.ftc.gov/sites/default/files/articles/pdf/pdf-0009_identitytheft_a_recovery_plan.pdf", "filename": "ftc-identity-theft-recovery-plan.pdf", "license": "Public domain (US government work)" },
-    { "id": "hud-buying-home", "library": "money-and-home", "title": "HUD: Shopping for Your Home Loan, Settlement Cost Booklet", "kind": "pdf", "url": "https://www.hud.gov/sites/documents/SETTLEMENT-COST-BOOKLET.PDF", "filename": "hud-settlement-cost-booklet.pdf", "license": "Public domain (US government work)" },
-
-    { "id": "dietary-guidelines-2020", "library": "health-guides", "title": "Dietary Guidelines for Americans, 2020-2025", "kind": "pdf", "url": "https://www.dietaryguidelines.gov/sites/default/files/2020-12/Dietary_Guidelines_for_Americans_2020-2025.pdf", "filename": "dietary-guidelines-for-americans-2020-2025.pdf", "license": "Public domain (US government work)" },
-    { "id": "physical-activity-guidelines", "library": "health-guides", "title": "Physical Activity Guidelines for Americans, 2nd edition", "kind": "pdf", "url": "https://health.gov/sites/default/files/2019-09/Physical_Activity_Guidelines_2nd_edition.pdf", "filename": "physical-activity-guidelines-2nd-edition.pdf", "license": "Public domain (US government work)" },
-    { "id": "nhlbi-blood-pressure", "library": "health-guides", "title": "NHLBI: Your Guide to Lowering Your Blood Pressure with DASH", "kind": "pdf", "url": "https://www.nhlbi.nih.gov/files/docs/public/heart/new_dash.pdf", "filename": "nhlbi-dash-eating-plan-guide.pdf", "license": "Public domain (US government work)" },
-    { "id": "nhlbi-healthy-heart", "library": "health-guides", "title": "NHLBI: Your Guide to a Healthy Heart", "kind": "pdf", "url": "https://www.nhlbi.nih.gov/files/docs/public/heart/healthyheart.pdf", "filename": "nhlbi-your-guide-to-a-healthy-heart.pdf", "license": "Public domain (US government work)" },
-    { "id": "nhlbi-sleep", "library": "health-guides", "title": "NHLBI: Your Guide to Healthy Sleep", "kind": "pdf", "url": "https://www.nhlbi.nih.gov/files/docs/public/sleep/healthy_sleep.pdf", "filename": "nhlbi-your-guide-to-healthy-sleep.pdf", "license": "Public domain (US government work)" },
-    { "id": "nia-exercise", "library": "health-guides", "title": "NIA: Exercise and Physical Activity, Your Everyday Guide", "kind": "pdf", "url": "https://order.nia.nih.gov/sites/default/files/2018-04/nia-exercise-guide.pdf", "filename": "nia-exercise-and-physical-activity-guide.pdf", "license": "Public domain (US government work)" },
-
-    { "id": "epa-radon", "library": "home-hazards", "title": "EPA: A Citizen's Guide to Radon", "kind": "pdf", "url": "https://www.epa.gov/sites/default/files/2016-12/documents/2016_a_citizens_guide_to_radon.pdf", "filename": "epa-citizens-guide-to-radon.pdf", "license": "Public domain (US government work)" },
-    { "id": "epa-lead", "library": "home-hazards", "title": "EPA: Protect Your Family From Lead in Your Home", "kind": "pdf", "url": "https://www.epa.gov/sites/default/files/2020-04/documents/lead-in-your-home-portrait-color-2020-508.pdf", "filename": "epa-protect-your-family-from-lead.pdf", "license": "Public domain (US government work)" },
-    { "id": "epa-mold", "library": "home-hazards", "title": "EPA: A Brief Guide to Mold, Moisture and Your Home", "kind": "pdf", "url": "https://www.epa.gov/sites/default/files/2016-10/documents/moldguide12.pdf", "filename": "epa-brief-guide-to-mold-moisture.pdf", "license": "Public domain (US government work)" },
-    { "id": "fema-are-you-ready", "library": "home-hazards", "title": "FEMA: Are You Ready? An In-depth Guide to Citizen Preparedness", "kind": "pdf", "url": "https://www.ready.gov/sites/default/files/2021-02/are-you-ready-guide.pdf", "filename": "fema-are-you-ready-guide.pdf", "license": "Public domain (US government work)" },
-    { "id": "fema-p320", "library": "home-hazards", "title": "FEMA P-320: Taking Shelter from the Storm, Building a Safe Room", "kind": "pdf", "url": "https://www.fema.gov/sites/default/files/2020-08/fema_taking-shelter-from-the-storm_p-320.pdf", "filename": "fema-p320-taking-shelter-from-the-storm.pdf", "license": "Public domain (US government work)" },
-    { "id": "usfa-home-fire", "library": "home-hazards", "title": "US Fire Administration: Home Fire Safety Checklist", "kind": "pdf", "url": "https://www.usfa.fema.gov/downloads/pdf/publications/home_fire_safety_checklist.pdf", "filename": "usfa-home-fire-safety-checklist.pdf", "license": "Public domain (US government work)" },
-
-    { "id": "uscis-m476", "library": "immigration-civics", "title": "USCIS M-476: A Guide to Naturalization", "kind": "pdf", "url": "https://www.uscis.gov/sites/default/files/document/guides/M-476.pdf", "filename": "uscis-m-476-guide-to-naturalization.pdf", "license": "Public domain (US government work)" },
-    { "id": "uscis-100q", "library": "immigration-civics", "title": "USCIS: 100 Civics Questions and Answers for the Naturalization Test", "kind": "pdf", "url": "https://www.uscis.gov/sites/default/files/document/questions-and-answers/100q.pdf", "filename": "uscis-100-civics-questions.pdf", "license": "Public domain (US government work)" },
-    { "id": "uscis-m618", "library": "immigration-civics", "title": "USCIS M-618: Welcome to the United States, A Guide for New Immigrants", "kind": "pdf", "url": "https://www.uscis.gov/sites/default/files/document/guides/M-618.pdf", "filename": "uscis-m-618-welcome-to-the-united-states.pdf", "license": "Public domain (US government work)" },
-    { "id": "uscis-m1051", "library": "immigration-civics", "title": "USCIS M-1051: The Citizen's Almanac", "kind": "pdf", "url": "https://www.uscis.gov/sites/default/files/document/guides/M-76.pdf", "filename": "uscis-m-76-citizens-almanac.pdf", "license": "Public domain (US government work)" },
-
-    { "id": "py-introduction", "library": "python-tutorial", "title": "Python Tutorial: An Informal Introduction to Python", "kind": "txt", "url": "https://raw.githubusercontent.com/python/cpython/main/Doc/tutorial/introduction.rst", "filename": "python-tutorial-03-introduction.txt", "license": "PSF License (Python documentation)" },
-    { "id": "py-controlflow", "library": "python-tutorial", "title": "Python Tutorial: More Control Flow Tools", "kind": "txt", "url": "https://raw.githubusercontent.com/python/cpython/main/Doc/tutorial/controlflow.rst", "filename": "python-tutorial-04-control-flow.txt", "license": "PSF License (Python documentation)" },
-    { "id": "py-datastructures", "library": "python-tutorial", "title": "Python Tutorial: Data Structures", "kind": "txt", "url": "https://raw.githubusercontent.com/python/cpython/main/Doc/tutorial/datastructures.rst", "filename": "python-tutorial-05-data-structures.txt", "license": "PSF License (Python documentation)" },
-    { "id": "py-modules", "library": "python-tutorial", "title": "Python Tutorial: Modules", "kind": "txt", "url": "https://raw.githubusercontent.com/python/cpython/main/Doc/tutorial/modules.rst", "filename": "python-tutorial-06-modules.txt", "license": "PSF License (Python documentation)" },
-    { "id": "py-inputoutput", "library": "python-tutorial", "title": "Python Tutorial: Input and Output", "kind": "txt", "url": "https://raw.githubusercontent.com/python/cpython/main/Doc/tutorial/inputoutput.rst", "filename": "python-tutorial-07-input-and-output.txt", "license": "PSF License (Python documentation)" },
-    { "id": "py-errors", "library": "python-tutorial", "title": "Python Tutorial: Errors and Exceptions", "kind": "txt", "url": "https://raw.githubusercontent.com/python/cpython/main/Doc/tutorial/errors.rst", "filename": "python-tutorial-08-errors-and-exceptions.txt", "license": "PSF License (Python documentation)" },
-    { "id": "py-classes", "library": "python-tutorial", "title": "Python Tutorial: Classes", "kind": "txt", "url": "https://raw.githubusercontent.com/python/cpython/main/Doc/tutorial/classes.rst", "filename": "python-tutorial-09-classes.txt", "license": "PSF License (Python documentation)" },
-    { "id": "py-stdlib", "library": "python-tutorial", "title": "Python Tutorial: Brief Tour of the Standard Library", "kind": "txt", "url": "https://raw.githubusercontent.com/python/cpython/main/Doc/tutorial/stdlib.rst", "filename": "python-tutorial-10-standard-library-tour.txt", "license": "PSF License (Python documentation)" },
-
-    { "id": "rust-ch03-01", "library": "rust-book", "title": "The Rust Programming Language: Variables and Mutability", "kind": "md", "url": "https://raw.githubusercontent.com/rust-lang/book/main/src/ch03-01-variables-and-mutability.md", "filename": "rust-book-ch03-01-variables-and-mutability.md", "license": "MIT OR Apache-2.0" },
-    { "id": "rust-ch03-02", "library": "rust-book", "title": "The Rust Programming Language: Data Types", "kind": "md", "url": "https://raw.githubusercontent.com/rust-lang/book/main/src/ch03-02-data-types.md", "filename": "rust-book-ch03-02-data-types.md", "license": "MIT OR Apache-2.0" },
-    { "id": "rust-ch04-01", "library": "rust-book", "title": "The Rust Programming Language: What is Ownership?", "kind": "md", "url": "https://raw.githubusercontent.com/rust-lang/book/main/src/ch04-01-what-is-ownership.md", "filename": "rust-book-ch04-01-what-is-ownership.md", "license": "MIT OR Apache-2.0" },
-    { "id": "rust-ch04-02", "library": "rust-book", "title": "The Rust Programming Language: References and Borrowing", "kind": "md", "url": "https://raw.githubusercontent.com/rust-lang/book/main/src/ch04-02-references-and-borrowing.md", "filename": "rust-book-ch04-02-references-and-borrowing.md", "license": "MIT OR Apache-2.0" },
-    { "id": "rust-ch06-01", "library": "rust-book", "title": "The Rust Programming Language: Defining an Enum", "kind": "md", "url": "https://raw.githubusercontent.com/rust-lang/book/main/src/ch06-01-defining-an-enum.md", "filename": "rust-book-ch06-01-defining-an-enum.md", "license": "MIT OR Apache-2.0" },
-    { "id": "rust-ch08-01", "library": "rust-book", "title": "The Rust Programming Language: Storing Lists of Values with Vectors", "kind": "md", "url": "https://raw.githubusercontent.com/rust-lang/book/main/src/ch08-01-vectors.md", "filename": "rust-book-ch08-01-vectors.md", "license": "MIT OR Apache-2.0" },
-    { "id": "rust-ch09-02", "library": "rust-book", "title": "The Rust Programming Language: Recoverable Errors with Result", "kind": "md", "url": "https://raw.githubusercontent.com/rust-lang/book/main/src/ch09-02-recoverable-errors-with-result.md", "filename": "rust-book-ch09-02-recoverable-errors-with-result.md", "license": "MIT OR Apache-2.0" },
-    { "id": "rust-ch10-01", "library": "rust-book", "title": "The Rust Programming Language: Generic Data Types", "kind": "md", "url": "https://raw.githubusercontent.com/rust-lang/book/main/src/ch10-01-syntax.md", "filename": "rust-book-ch10-01-generic-data-types.md", "license": "MIT OR Apache-2.0" },
-
-    { "id": "django-tutorial01", "library": "django-docs", "title": "Django: Writing your first Django app, part 1", "kind": "txt", "url": "https://raw.githubusercontent.com/django/django/main/docs/intro/tutorial01.txt", "filename": "django-intro-tutorial01.txt", "license": "BSD-3-Clause" },
-    { "id": "django-tutorial02", "library": "django-docs", "title": "Django: Writing your first Django app, part 2", "kind": "txt", "url": "https://raw.githubusercontent.com/django/django/main/docs/intro/tutorial02.txt", "filename": "django-intro-tutorial02.txt", "license": "BSD-3-Clause" },
-    { "id": "django-tutorial03", "library": "django-docs", "title": "Django: Writing your first Django app, part 3", "kind": "txt", "url": "https://raw.githubusercontent.com/django/django/main/docs/intro/tutorial03.txt", "filename": "django-intro-tutorial03.txt", "license": "BSD-3-Clause" },
-    { "id": "django-models", "library": "django-docs", "title": "Django: Models", "kind": "txt", "url": "https://raw.githubusercontent.com/django/django/main/docs/topics/db/models.txt", "filename": "django-topics-db-models.txt", "license": "BSD-3-Clause" },
-    { "id": "django-urls", "library": "django-docs", "title": "Django: URL dispatcher", "kind": "txt", "url": "https://raw.githubusercontent.com/django/django/main/docs/topics/http/urls.txt", "filename": "django-topics-http-urls.txt", "license": "BSD-3-Clause" },
-    { "id": "django-templates", "library": "django-docs", "title": "Django: Templates", "kind": "txt", "url": "https://raw.githubusercontent.com/django/django/main/docs/topics/templates.txt", "filename": "django-topics-templates.txt", "license": "BSD-3-Clause" },
-    { "id": "django-settings-howto", "library": "django-docs", "title": "Django: Deployment checklist", "kind": "txt", "url": "https://raw.githubusercontent.com/django/django/main/docs/howto/deployment/checklist.txt", "filename": "django-howto-deployment-checklist.txt", "license": "BSD-3-Clause" },
-
-    { "id": "wp-apollo-11", "library": "wikipedia-history", "title": "Apollo 11", "kind": "wikipedia", "filename": "wikipedia-apollo-11.txt", "license": "CC BY-SA 4.0" },
-    { "id": "wp-rosetta-stone", "library": "wikipedia-history", "title": "Rosetta Stone", "kind": "wikipedia", "filename": "wikipedia-rosetta-stone.txt", "license": "CC BY-SA 4.0" },
-    { "id": "wp-great-fire", "library": "wikipedia-history", "title": "Great Fire of London", "kind": "wikipedia", "filename": "wikipedia-great-fire-of-london.txt", "license": "CC BY-SA 4.0" },
-    { "id": "wp-panama-canal", "library": "wikipedia-history", "title": "Panama Canal", "kind": "wikipedia", "filename": "wikipedia-panama-canal.txt", "license": "CC BY-SA 4.0" },
-    { "id": "wp-magna-carta", "library": "wikipedia-history", "title": "Magna Carta", "kind": "wikipedia", "filename": "wikipedia-magna-carta.txt", "license": "CC BY-SA 4.0" },
-    { "id": "wp-transcontinental-railroad", "library": "wikipedia-history", "title": "First transcontinental railroad", "kind": "wikipedia", "filename": "wikipedia-first-transcontinental-railroad.txt", "license": "CC BY-SA 4.0" },
-    { "id": "wp-hubble", "library": "wikipedia-history", "title": "Hubble Space Telescope", "kind": "wikipedia", "filename": "wikipedia-hubble-space-telescope.txt", "license": "CC BY-SA 4.0" },
-
-    { "id": "wp-photosynthesis", "library": "wikipedia-science", "title": "Photosynthesis", "kind": "wikipedia", "filename": "wikipedia-photosynthesis.txt", "license": "CC BY-SA 4.0" },
-    { "id": "wp-plate-tectonics", "library": "wikipedia-science", "title": "Plate tectonics", "kind": "wikipedia", "filename": "wikipedia-plate-tectonics.txt", "license": "CC BY-SA 4.0" },
-    { "id": "wp-crispr", "library": "wikipedia-science", "title": "CRISPR gene editing", "kind": "wikipedia", "filename": "wikipedia-crispr-gene-editing.txt", "license": "CC BY-SA 4.0" },
-    { "id": "wp-black-hole", "library": "wikipedia-science", "title": "Black hole", "kind": "wikipedia", "filename": "wikipedia-black-hole.txt", "license": "CC BY-SA 4.0" },
-    { "id": "wp-antibiotic", "library": "wikipedia-science", "title": "Antibiotic", "kind": "wikipedia", "filename": "wikipedia-antibiotic.txt", "license": "CC BY-SA 4.0" },
-    { "id": "wp-periodic-table", "library": "wikipedia-science", "title": "Periodic table", "kind": "wikipedia", "filename": "wikipedia-periodic-table.txt", "license": "CC BY-SA 4.0" },
-    { "id": "wp-vaccine", "library": "wikipedia-science", "title": "Vaccine", "kind": "wikipedia", "filename": "wikipedia-vaccine.txt", "license": "CC BY-SA 4.0" },
-
-    { "id": "wp-tcp", "library": "wikipedia-technology", "title": "Transmission Control Protocol", "kind": "wikipedia", "filename": "wikipedia-transmission-control-protocol.txt", "license": "CC BY-SA 4.0" },
-    { "id": "wp-public-key", "library": "wikipedia-technology", "title": "Public-key cryptography", "kind": "wikipedia", "filename": "wikipedia-public-key-cryptography.txt", "license": "CC BY-SA 4.0" },
-    { "id": "wp-lithium-ion", "library": "wikipedia-technology", "title": "Lithium-ion battery", "kind": "wikipedia", "filename": "wikipedia-lithium-ion-battery.txt", "license": "CC BY-SA 4.0" },
-    { "id": "wp-gps", "library": "wikipedia-technology", "title": "Global Positioning System", "kind": "wikipedia", "filename": "wikipedia-global-positioning-system.txt", "license": "CC BY-SA 4.0" },
-    { "id": "wp-ssd", "library": "wikipedia-technology", "title": "Solid-state drive", "kind": "wikipedia", "filename": "wikipedia-solid-state-drive.txt", "license": "CC BY-SA 4.0" },
-    { "id": "wp-qr-code", "library": "wikipedia-technology", "title": "QR code", "kind": "wikipedia", "filename": "wikipedia-qr-code.txt", "license": "CC BY-SA 4.0" },
-    { "id": "wp-dns", "library": "wikipedia-technology", "title": "Domain Name System", "kind": "wikipedia", "filename": "wikipedia-domain-name-system.txt", "license": "CC BY-SA 4.0" },
-
-    { "id": "pg-132", "library": "classic-books", "title": "The Art of War (Sun Tzu, Giles translation)", "kind": "txt", "url": "https://www.gutenberg.org/cache/epub/132/pg132.txt", "filename": "gutenberg-132-the-art-of-war.txt", "license": "Public domain (Project Gutenberg)" },
-    { "id": "pg-1952", "library": "classic-books", "title": "The Yellow Wallpaper (Charlotte Perkins Gilman)", "kind": "txt", "url": "https://www.gutenberg.org/cache/epub/1952/pg1952.txt", "filename": "gutenberg-1952-the-yellow-wallpaper.txt", "license": "Public domain (Project Gutenberg)" },
-    { "id": "pg-844", "library": "classic-books", "title": "The Importance of Being Earnest (Oscar Wilde)", "kind": "txt", "url": "https://www.gutenberg.org/cache/epub/844/pg844.txt", "filename": "gutenberg-844-the-importance-of-being-earnest.txt", "license": "Public domain (Project Gutenberg)" },
-    { "id": "pg-11", "library": "classic-books", "title": "Alice's Adventures in Wonderland (Lewis Carroll)", "kind": "txt", "url": "https://www.gutenberg.org/cache/epub/11/pg11.txt", "filename": "gutenberg-11-alices-adventures-in-wonderland.txt", "license": "Public domain (Project Gutenberg)" },
-    { "id": "pg-16", "library": "classic-books", "title": "Peter Pan (J. M. Barrie)", "kind": "txt", "url": "https://www.gutenberg.org/cache/epub/16/pg16.txt", "filename": "gutenberg-16-peter-pan.txt", "license": "Public domain (Project Gutenberg)" },
-    { "id": "pg-36", "library": "classic-books", "title": "The War of the Worlds (H. G. Wells)", "kind": "txt", "url": "https://www.gutenberg.org/cache/epub/36/pg36.txt", "filename": "gutenberg-36-the-war-of-the-worlds.txt", "license": "Public domain (Project Gutenberg)" }
+    {
+      "id": "irs-p501",
+      "library": "tax-help",
+      "title": "IRS Publication 501: Dependents, Standard Deduction, and Filing Information",
+      "kind": "pdf",
+      "url": "https://www.irs.gov/pub/irs-pdf/p501.pdf",
+      "filename": "irs-publication-501-dependents-standard-deduction.pdf",
+      "license": "Public domain (US government work)"
+    },
+    {
+      "id": "irs-p970",
+      "library": "tax-help",
+      "title": "IRS Publication 970: Tax Benefits for Education",
+      "kind": "pdf",
+      "url": "https://www.irs.gov/pub/irs-pdf/p970.pdf",
+      "filename": "irs-publication-970-tax-benefits-for-education.pdf",
+      "license": "Public domain (US government work)"
+    },
+    {
+      "id": "irs-p523",
+      "library": "tax-help",
+      "title": "IRS Publication 523: Selling Your Home",
+      "kind": "pdf",
+      "url": "https://www.irs.gov/pub/irs-pdf/p523.pdf",
+      "filename": "irs-publication-523-selling-your-home.pdf",
+      "license": "Public domain (US government work)"
+    },
+    {
+      "id": "irs-p590a",
+      "library": "tax-help",
+      "title": "IRS Publication 590-A: Contributions to Individual Retirement Arrangements",
+      "kind": "pdf",
+      "url": "https://www.irs.gov/pub/irs-pdf/p590a.pdf",
+      "filename": "irs-publication-590a-ira-contributions.pdf",
+      "license": "Public domain (US government work)"
+    },
+    {
+      "id": "irs-p936",
+      "library": "tax-help",
+      "title": "IRS Publication 936: Home Mortgage Interest Deduction",
+      "kind": "pdf",
+      "url": "https://www.irs.gov/pub/irs-pdf/p936.pdf",
+      "filename": "irs-publication-936-home-mortgage-interest.pdf",
+      "license": "Public domain (US government work)"
+    },
+    {
+      "id": "irs-p502",
+      "library": "tax-help",
+      "title": "IRS Publication 502: Medical and Dental Expenses",
+      "kind": "pdf",
+      "url": "https://www.irs.gov/pub/irs-pdf/p502.pdf",
+      "filename": "irs-publication-502-medical-and-dental-expenses.pdf",
+      "license": "Public domain (US government work)"
+    },
+    {
+      "id": "irs-p463",
+      "library": "tax-help",
+      "title": "IRS Publication 463: Travel, Gift, and Car Expenses",
+      "kind": "pdf",
+      "url": "https://www.irs.gov/pub/irs-pdf/p463.pdf",
+      "filename": "irs-publication-463-travel-gift-car-expenses.pdf",
+      "license": "Public domain (US government work)"
+    },
+    {
+      "id": "nist-sp800-61r2",
+      "library": "security-standards",
+      "title": "NIST SP 800-61 Rev. 2: Computer Security Incident Handling Guide",
+      "kind": "pdf",
+      "url": "https://nvlpubs.nist.gov/nistpubs/SpecialPublications/NIST.SP.800-61r2.pdf",
+      "filename": "nist-sp-800-61r2-incident-handling-guide.pdf",
+      "license": "Public domain (US government work)"
+    },
+    {
+      "id": "nist-sp800-63-3",
+      "library": "security-standards",
+      "title": "NIST SP 800-63-3: Digital Identity Guidelines",
+      "kind": "pdf",
+      "url": "https://nvlpubs.nist.gov/nistpubs/SpecialPublications/NIST.SP.800-63-3.pdf",
+      "filename": "nist-sp-800-63-3-digital-identity-guidelines.pdf",
+      "license": "Public domain (US government work)"
+    },
+    {
+      "id": "nist-sp800-207",
+      "library": "security-standards",
+      "title": "NIST SP 800-207: Zero Trust Architecture",
+      "kind": "pdf",
+      "url": "https://nvlpubs.nist.gov/nistpubs/SpecialPublications/NIST.SP.800-207.pdf",
+      "filename": "nist-sp-800-207-zero-trust-architecture.pdf",
+      "license": "Public domain (US government work)"
+    },
+    {
+      "id": "nist-sp800-88r1",
+      "library": "security-standards",
+      "title": "NIST SP 800-88 Rev. 1: Guidelines for Media Sanitization",
+      "kind": "pdf",
+      "url": "https://nvlpubs.nist.gov/nistpubs/SpecialPublications/NIST.SP.800-88r1.pdf",
+      "filename": "nist-sp-800-88r1-media-sanitization.pdf",
+      "license": "Public domain (US government work)"
+    },
+    {
+      "id": "nist-cswp-29",
+      "library": "security-standards",
+      "title": "NIST Cybersecurity Framework (CSF) 2.0",
+      "kind": "pdf",
+      "url": "https://nvlpubs.nist.gov/nistpubs/CSWP/NIST.CSWP.29.pdf",
+      "filename": "nist-cswp-29-cybersecurity-framework-2.pdf",
+      "license": "Public domain (US government work)"
+    },
+    {
+      "id": "nist-sp800-30r1",
+      "library": "security-standards",
+      "title": "NIST SP 800-30 Rev. 1: Guide for Conducting Risk Assessments",
+      "kind": "pdf",
+      "url": "https://nvlpubs.nist.gov/nistpubs/Legacy/SP/nistspecialpublication800-30r1.pdf",
+      "filename": "nist-sp-800-30r1-risk-assessments.pdf",
+      "license": "Public domain (US government work)"
+    },
+    {
+      "id": "nist-sp800-171r2",
+      "library": "security-standards",
+      "title": "NIST SP 800-171 Rev. 2: Protecting Controlled Unclassified Information",
+      "kind": "pdf",
+      "url": "https://nvlpubs.nist.gov/nistpubs/SpecialPublications/NIST.SP.800-171r2.pdf",
+      "filename": "nist-sp-800-171r2-protecting-cui.pdf",
+      "license": "Public domain (US government work)"
+    },
+    {
+      "id": "circ01",
+      "library": "copyright-office",
+      "title": "Copyright Office Circular 1: Copyright Basics",
+      "kind": "pdf",
+      "url": "https://www.copyright.gov/circs/circ01.pdf",
+      "filename": "copyright-circular-01-copyright-basics.pdf",
+      "license": "Public domain (US government work)"
+    },
+    {
+      "id": "circ02",
+      "library": "copyright-office",
+      "title": "Copyright Office Circular 2: Copyright Registration",
+      "kind": "pdf",
+      "url": "https://www.copyright.gov/circs/circ02.pdf",
+      "filename": "copyright-circular-02-copyright-registration.pdf",
+      "license": "Public domain (US government work)"
+    },
+    {
+      "id": "circ03",
+      "library": "copyright-office",
+      "title": "Copyright Office Circular 3: Copyright Notice",
+      "kind": "pdf",
+      "url": "https://www.copyright.gov/circs/circ03.pdf",
+      "filename": "copyright-circular-03-copyright-notice.pdf",
+      "license": "Public domain (US government work)"
+    },
+    {
+      "id": "circ09",
+      "library": "copyright-office",
+      "title": "Copyright Office Circular 9: Works Made for Hire",
+      "kind": "pdf",
+      "url": "https://www.copyright.gov/circs/circ09.pdf",
+      "filename": "copyright-circular-09-works-made-for-hire.pdf",
+      "license": "Public domain (US government work)"
+    },
+    {
+      "id": "circ14",
+      "library": "copyright-office",
+      "title": "Copyright Office Circular 14: Copyright in Derivative Works and Compilations",
+      "kind": "pdf",
+      "url": "https://www.copyright.gov/circs/circ14.pdf",
+      "filename": "copyright-circular-14-derivative-works.pdf",
+      "license": "Public domain (US government work)"
+    },
+    {
+      "id": "circ15a",
+      "library": "copyright-office",
+      "title": "Copyright Office Circular 15A: Duration of Copyright",
+      "kind": "pdf",
+      "url": "https://www.copyright.gov/circs/circ15a.pdf",
+      "filename": "copyright-circular-15a-duration-of-copyright.pdf",
+      "license": "Public domain (US government work)"
+    },
+    {
+      "id": "circ33",
+      "library": "copyright-office",
+      "title": "Copyright Office Circular 33: Works Not Protected by Copyright",
+      "kind": "pdf",
+      "url": "https://www.copyright.gov/circs/circ33.pdf",
+      "filename": "copyright-circular-33-works-not-protected.pdf",
+      "license": "Public domain (US government work)"
+    },
+    {
+      "id": "osha-3151",
+      "library": "workplace-safety",
+      "title": "OSHA 3151: Personal Protective Equipment",
+      "kind": "pdf",
+      "url": "https://www.osha.gov/sites/default/files/publications/osha3151.pdf",
+      "filename": "osha-3151-personal-protective-equipment.pdf",
+      "license": "Public domain (US government work)"
+    },
+    {
+      "id": "osha-3071",
+      "library": "workplace-safety",
+      "title": "OSHA 3071: Job Hazard Analysis",
+      "kind": "pdf",
+      "url": "https://www.osha.gov/sites/default/files/publications/osha3071.pdf",
+      "filename": "osha-3071-job-hazard-analysis.pdf",
+      "license": "Public domain (US government work)"
+    },
+    {
+      "id": "osha-3021",
+      "library": "workplace-safety",
+      "title": "OSHA 3021: Workers' Rights",
+      "kind": "pdf",
+      "url": "https://www.osha.gov/sites/default/files/publications/osha3021.pdf",
+      "filename": "osha-3021-workers-rights.pdf",
+      "license": "Public domain (US government work)"
+    },
+    {
+      "id": "osha-3170",
+      "library": "workplace-safety",
+      "title": "OSHA 3170: Safeguarding Equipment and Protecting Employees from Amputations",
+      "kind": "pdf",
+      "url": "https://www.osha.gov/sites/default/files/publications/osha3170.pdf",
+      "filename": "osha-3170-safeguarding-equipment.pdf",
+      "license": "Public domain (US government work)"
+    },
+    {
+      "id": "osha-3084",
+      "library": "workplace-safety",
+      "title": "OSHA 3084: Principal Emergency Response and Preparedness Requirements",
+      "kind": "pdf",
+      "url": "https://www.osha.gov/sites/default/files/publications/osha3122.pdf",
+      "filename": "osha-3122-principal-emergency-response.pdf",
+      "license": "Public domain (US government work)"
+    },
+    {
+      "id": "osha-3088",
+      "library": "workplace-safety",
+      "title": "OSHA 3088: How to Plan for Workplace Emergencies and Evacuations",
+      "kind": "pdf",
+      "url": "https://www.osha.gov/sites/default/files/publications/osha3088.pdf",
+      "filename": "osha-3088-workplace-emergencies-evacuations.pdf",
+      "license": "Public domain (US government work)"
+    },
+    {
+      "id": "osha-3990",
+      "library": "workplace-safety",
+      "title": "OSHA 3302: Small Business Safety and Health Handbook",
+      "kind": "pdf",
+      "url": "https://www.osha.gov/sites/default/files/publications/small-business.pdf",
+      "filename": "osha-small-business-safety-handbook.pdf",
+      "license": "Public domain (US government work)"
+    },
+    {
+      "id": "cfpb-home-loan-toolkit",
+      "library": "money-and-home",
+      "title": "CFPB: Your Home Loan Toolkit",
+      "kind": "pdf",
+      "url": "https://files.consumerfinance.gov/f/201503_cfpb_your-home-loan-toolkit-web.pdf",
+      "filename": "cfpb-your-home-loan-toolkit.pdf",
+      "license": "Public domain (US government work)"
+    },
+    {
+      "id": "nhlbi-blood-pressure",
+      "library": "health-guides",
+      "title": "NHLBI: Your Guide to Lowering Your Blood Pressure with DASH",
+      "kind": "pdf",
+      "url": "https://www.nhlbi.nih.gov/files/docs/public/heart/new_dash.pdf",
+      "filename": "nhlbi-dash-eating-plan-guide.pdf",
+      "license": "Public domain (US government work)"
+    },
+    {
+      "id": "nhlbi-healthy-heart",
+      "library": "health-guides",
+      "title": "NHLBI: Your Guide to a Healthy Heart",
+      "kind": "pdf",
+      "url": "https://www.nhlbi.nih.gov/files/docs/public/heart/healthyheart.pdf",
+      "filename": "nhlbi-your-guide-to-a-healthy-heart.pdf",
+      "license": "Public domain (US government work)"
+    },
+    {
+      "id": "nhlbi-sleep",
+      "library": "health-guides",
+      "title": "NHLBI: Your Guide to Healthy Sleep",
+      "kind": "pdf",
+      "url": "https://www.nhlbi.nih.gov/files/docs/public/sleep/healthy_sleep.pdf",
+      "filename": "nhlbi-your-guide-to-healthy-sleep.pdf",
+      "license": "Public domain (US government work)"
+    },
+    {
+      "id": "epa-radon",
+      "library": "home-hazards",
+      "title": "EPA: A Citizen's Guide to Radon",
+      "kind": "pdf",
+      "url": "https://www.epa.gov/sites/default/files/2016-12/documents/2016_a_citizens_guide_to_radon.pdf",
+      "filename": "epa-citizens-guide-to-radon.pdf",
+      "license": "Public domain (US government work)"
+    },
+    {
+      "id": "epa-lead",
+      "library": "home-hazards",
+      "title": "EPA: Protect Your Family From Lead in Your Home",
+      "kind": "pdf",
+      "url": "https://www.epa.gov/sites/default/files/2020-04/documents/lead-in-your-home-portrait-color-2020-508.pdf",
+      "filename": "epa-protect-your-family-from-lead.pdf",
+      "license": "Public domain (US government work)"
+    },
+    {
+      "id": "epa-mold",
+      "library": "home-hazards",
+      "title": "EPA: A Brief Guide to Mold, Moisture and Your Home",
+      "kind": "pdf",
+      "url": "https://www.epa.gov/sites/default/files/2016-10/documents/moldguide12.pdf",
+      "filename": "epa-brief-guide-to-mold-moisture.pdf",
+      "license": "Public domain (US government work)"
+    },
+    {
+      "id": "py-introduction",
+      "library": "python-tutorial",
+      "title": "Python Tutorial: An Informal Introduction to Python",
+      "kind": "txt",
+      "url": "https://raw.githubusercontent.com/python/cpython/main/Doc/tutorial/introduction.rst",
+      "filename": "python-tutorial-03-introduction.txt",
+      "license": "PSF License (Python documentation)"
+    },
+    {
+      "id": "py-controlflow",
+      "library": "python-tutorial",
+      "title": "Python Tutorial: More Control Flow Tools",
+      "kind": "txt",
+      "url": "https://raw.githubusercontent.com/python/cpython/main/Doc/tutorial/controlflow.rst",
+      "filename": "python-tutorial-04-control-flow.txt",
+      "license": "PSF License (Python documentation)"
+    },
+    {
+      "id": "py-datastructures",
+      "library": "python-tutorial",
+      "title": "Python Tutorial: Data Structures",
+      "kind": "txt",
+      "url": "https://raw.githubusercontent.com/python/cpython/main/Doc/tutorial/datastructures.rst",
+      "filename": "python-tutorial-05-data-structures.txt",
+      "license": "PSF License (Python documentation)"
+    },
+    {
+      "id": "py-modules",
+      "library": "python-tutorial",
+      "title": "Python Tutorial: Modules",
+      "kind": "txt",
+      "url": "https://raw.githubusercontent.com/python/cpython/main/Doc/tutorial/modules.rst",
+      "filename": "python-tutorial-06-modules.txt",
+      "license": "PSF License (Python documentation)"
+    },
+    {
+      "id": "py-inputoutput",
+      "library": "python-tutorial",
+      "title": "Python Tutorial: Input and Output",
+      "kind": "txt",
+      "url": "https://raw.githubusercontent.com/python/cpython/main/Doc/tutorial/inputoutput.rst",
+      "filename": "python-tutorial-07-input-and-output.txt",
+      "license": "PSF License (Python documentation)"
+    },
+    {
+      "id": "py-errors",
+      "library": "python-tutorial",
+      "title": "Python Tutorial: Errors and Exceptions",
+      "kind": "txt",
+      "url": "https://raw.githubusercontent.com/python/cpython/main/Doc/tutorial/errors.rst",
+      "filename": "python-tutorial-08-errors-and-exceptions.txt",
+      "license": "PSF License (Python documentation)"
+    },
+    {
+      "id": "py-classes",
+      "library": "python-tutorial",
+      "title": "Python Tutorial: Classes",
+      "kind": "txt",
+      "url": "https://raw.githubusercontent.com/python/cpython/main/Doc/tutorial/classes.rst",
+      "filename": "python-tutorial-09-classes.txt",
+      "license": "PSF License (Python documentation)"
+    },
+    {
+      "id": "py-stdlib",
+      "library": "python-tutorial",
+      "title": "Python Tutorial: Brief Tour of the Standard Library",
+      "kind": "txt",
+      "url": "https://raw.githubusercontent.com/python/cpython/main/Doc/tutorial/stdlib.rst",
+      "filename": "python-tutorial-10-standard-library-tour.txt",
+      "license": "PSF License (Python documentation)"
+    },
+    {
+      "id": "rust-ch03-01",
+      "library": "rust-book",
+      "title": "The Rust Programming Language: Variables and Mutability",
+      "kind": "md",
+      "url": "https://raw.githubusercontent.com/rust-lang/book/main/src/ch03-01-variables-and-mutability.md",
+      "filename": "rust-book-ch03-01-variables-and-mutability.md",
+      "license": "MIT OR Apache-2.0"
+    },
+    {
+      "id": "rust-ch03-02",
+      "library": "rust-book",
+      "title": "The Rust Programming Language: Data Types",
+      "kind": "md",
+      "url": "https://raw.githubusercontent.com/rust-lang/book/main/src/ch03-02-data-types.md",
+      "filename": "rust-book-ch03-02-data-types.md",
+      "license": "MIT OR Apache-2.0"
+    },
+    {
+      "id": "rust-ch04-01",
+      "library": "rust-book",
+      "title": "The Rust Programming Language: What is Ownership?",
+      "kind": "md",
+      "url": "https://raw.githubusercontent.com/rust-lang/book/main/src/ch04-01-what-is-ownership.md",
+      "filename": "rust-book-ch04-01-what-is-ownership.md",
+      "license": "MIT OR Apache-2.0"
+    },
+    {
+      "id": "rust-ch04-02",
+      "library": "rust-book",
+      "title": "The Rust Programming Language: References and Borrowing",
+      "kind": "md",
+      "url": "https://raw.githubusercontent.com/rust-lang/book/main/src/ch04-02-references-and-borrowing.md",
+      "filename": "rust-book-ch04-02-references-and-borrowing.md",
+      "license": "MIT OR Apache-2.0"
+    },
+    {
+      "id": "rust-ch06-01",
+      "library": "rust-book",
+      "title": "The Rust Programming Language: Defining an Enum",
+      "kind": "md",
+      "url": "https://raw.githubusercontent.com/rust-lang/book/main/src/ch06-01-defining-an-enum.md",
+      "filename": "rust-book-ch06-01-defining-an-enum.md",
+      "license": "MIT OR Apache-2.0"
+    },
+    {
+      "id": "rust-ch08-01",
+      "library": "rust-book",
+      "title": "The Rust Programming Language: Storing Lists of Values with Vectors",
+      "kind": "md",
+      "url": "https://raw.githubusercontent.com/rust-lang/book/main/src/ch08-01-vectors.md",
+      "filename": "rust-book-ch08-01-vectors.md",
+      "license": "MIT OR Apache-2.0"
+    },
+    {
+      "id": "rust-ch09-02",
+      "library": "rust-book",
+      "title": "The Rust Programming Language: Recoverable Errors with Result",
+      "kind": "md",
+      "url": "https://raw.githubusercontent.com/rust-lang/book/main/src/ch09-02-recoverable-errors-with-result.md",
+      "filename": "rust-book-ch09-02-recoverable-errors-with-result.md",
+      "license": "MIT OR Apache-2.0"
+    },
+    {
+      "id": "rust-ch10-01",
+      "library": "rust-book",
+      "title": "The Rust Programming Language: Generic Data Types",
+      "kind": "md",
+      "url": "https://raw.githubusercontent.com/rust-lang/book/main/src/ch10-01-syntax.md",
+      "filename": "rust-book-ch10-01-generic-data-types.md",
+      "license": "MIT OR Apache-2.0"
+    },
+    {
+      "id": "django-tutorial01",
+      "library": "django-docs",
+      "title": "Django: Writing your first Django app, part 1",
+      "kind": "txt",
+      "url": "https://raw.githubusercontent.com/django/django/main/docs/intro/tutorial01.txt",
+      "filename": "django-intro-tutorial01.txt",
+      "license": "BSD-3-Clause"
+    },
+    {
+      "id": "django-tutorial02",
+      "library": "django-docs",
+      "title": "Django: Writing your first Django app, part 2",
+      "kind": "txt",
+      "url": "https://raw.githubusercontent.com/django/django/main/docs/intro/tutorial02.txt",
+      "filename": "django-intro-tutorial02.txt",
+      "license": "BSD-3-Clause"
+    },
+    {
+      "id": "django-tutorial03",
+      "library": "django-docs",
+      "title": "Django: Writing your first Django app, part 3",
+      "kind": "txt",
+      "url": "https://raw.githubusercontent.com/django/django/main/docs/intro/tutorial03.txt",
+      "filename": "django-intro-tutorial03.txt",
+      "license": "BSD-3-Clause"
+    },
+    {
+      "id": "django-models",
+      "library": "django-docs",
+      "title": "Django: Models",
+      "kind": "txt",
+      "url": "https://raw.githubusercontent.com/django/django/main/docs/topics/db/models.txt",
+      "filename": "django-topics-db-models.txt",
+      "license": "BSD-3-Clause"
+    },
+    {
+      "id": "django-urls",
+      "library": "django-docs",
+      "title": "Django: URL dispatcher",
+      "kind": "txt",
+      "url": "https://raw.githubusercontent.com/django/django/main/docs/topics/http/urls.txt",
+      "filename": "django-topics-http-urls.txt",
+      "license": "BSD-3-Clause"
+    },
+    {
+      "id": "django-templates",
+      "library": "django-docs",
+      "title": "Django: Templates",
+      "kind": "txt",
+      "url": "https://raw.githubusercontent.com/django/django/main/docs/topics/templates.txt",
+      "filename": "django-topics-templates.txt",
+      "license": "BSD-3-Clause"
+    },
+    {
+      "id": "django-settings-howto",
+      "library": "django-docs",
+      "title": "Django: Deployment checklist",
+      "kind": "txt",
+      "url": "https://raw.githubusercontent.com/django/django/main/docs/howto/deployment/checklist.txt",
+      "filename": "django-howto-deployment-checklist.txt",
+      "license": "BSD-3-Clause"
+    },
+    {
+      "id": "wp-apollo-11",
+      "library": "wikipedia-history",
+      "title": "Apollo 11",
+      "kind": "wikipedia",
+      "filename": "wikipedia-apollo-11.txt",
+      "license": "CC BY-SA 4.0"
+    },
+    {
+      "id": "wp-rosetta-stone",
+      "library": "wikipedia-history",
+      "title": "Rosetta Stone",
+      "kind": "wikipedia",
+      "filename": "wikipedia-rosetta-stone.txt",
+      "license": "CC BY-SA 4.0"
+    },
+    {
+      "id": "wp-great-fire",
+      "library": "wikipedia-history",
+      "title": "Great Fire of London",
+      "kind": "wikipedia",
+      "filename": "wikipedia-great-fire-of-london.txt",
+      "license": "CC BY-SA 4.0"
+    },
+    {
+      "id": "wp-panama-canal",
+      "library": "wikipedia-history",
+      "title": "Panama Canal",
+      "kind": "wikipedia",
+      "filename": "wikipedia-panama-canal.txt",
+      "license": "CC BY-SA 4.0"
+    },
+    {
+      "id": "wp-magna-carta",
+      "library": "wikipedia-history",
+      "title": "Magna Carta",
+      "kind": "wikipedia",
+      "filename": "wikipedia-magna-carta.txt",
+      "license": "CC BY-SA 4.0"
+    },
+    {
+      "id": "wp-transcontinental-railroad",
+      "library": "wikipedia-history",
+      "title": "First transcontinental railroad",
+      "kind": "wikipedia",
+      "filename": "wikipedia-first-transcontinental-railroad.txt",
+      "license": "CC BY-SA 4.0"
+    },
+    {
+      "id": "wp-hubble",
+      "library": "wikipedia-history",
+      "title": "Hubble Space Telescope",
+      "kind": "wikipedia",
+      "filename": "wikipedia-hubble-space-telescope.txt",
+      "license": "CC BY-SA 4.0"
+    },
+    {
+      "id": "wp-photosynthesis",
+      "library": "wikipedia-science",
+      "title": "Photosynthesis",
+      "kind": "wikipedia",
+      "filename": "wikipedia-photosynthesis.txt",
+      "license": "CC BY-SA 4.0"
+    },
+    {
+      "id": "wp-plate-tectonics",
+      "library": "wikipedia-science",
+      "title": "Plate tectonics",
+      "kind": "wikipedia",
+      "filename": "wikipedia-plate-tectonics.txt",
+      "license": "CC BY-SA 4.0"
+    },
+    {
+      "id": "wp-crispr",
+      "library": "wikipedia-science",
+      "title": "CRISPR gene editing",
+      "kind": "wikipedia",
+      "filename": "wikipedia-crispr-gene-editing.txt",
+      "license": "CC BY-SA 4.0"
+    },
+    {
+      "id": "wp-black-hole",
+      "library": "wikipedia-science",
+      "title": "Black hole",
+      "kind": "wikipedia",
+      "filename": "wikipedia-black-hole.txt",
+      "license": "CC BY-SA 4.0"
+    },
+    {
+      "id": "wp-antibiotic",
+      "library": "wikipedia-science",
+      "title": "Antibiotic",
+      "kind": "wikipedia",
+      "filename": "wikipedia-antibiotic.txt",
+      "license": "CC BY-SA 4.0"
+    },
+    {
+      "id": "wp-periodic-table",
+      "library": "wikipedia-science",
+      "title": "Periodic table",
+      "kind": "wikipedia",
+      "filename": "wikipedia-periodic-table.txt",
+      "license": "CC BY-SA 4.0"
+    },
+    {
+      "id": "wp-vaccine",
+      "library": "wikipedia-science",
+      "title": "Vaccine",
+      "kind": "wikipedia",
+      "filename": "wikipedia-vaccine.txt",
+      "license": "CC BY-SA 4.0"
+    },
+    {
+      "id": "wp-tcp",
+      "library": "wikipedia-technology",
+      "title": "Transmission Control Protocol",
+      "kind": "wikipedia",
+      "filename": "wikipedia-transmission-control-protocol.txt",
+      "license": "CC BY-SA 4.0"
+    },
+    {
+      "id": "wp-public-key",
+      "library": "wikipedia-technology",
+      "title": "Public-key cryptography",
+      "kind": "wikipedia",
+      "filename": "wikipedia-public-key-cryptography.txt",
+      "license": "CC BY-SA 4.0"
+    },
+    {
+      "id": "wp-lithium-ion",
+      "library": "wikipedia-technology",
+      "title": "Lithium-ion battery",
+      "kind": "wikipedia",
+      "filename": "wikipedia-lithium-ion-battery.txt",
+      "license": "CC BY-SA 4.0"
+    },
+    {
+      "id": "wp-gps",
+      "library": "wikipedia-technology",
+      "title": "Global Positioning System",
+      "kind": "wikipedia",
+      "filename": "wikipedia-global-positioning-system.txt",
+      "license": "CC BY-SA 4.0"
+    },
+    {
+      "id": "wp-ssd",
+      "library": "wikipedia-technology",
+      "title": "Solid-state drive",
+      "kind": "wikipedia",
+      "filename": "wikipedia-solid-state-drive.txt",
+      "license": "CC BY-SA 4.0"
+    },
+    {
+      "id": "wp-qr-code",
+      "library": "wikipedia-technology",
+      "title": "QR code",
+      "kind": "wikipedia",
+      "filename": "wikipedia-qr-code.txt",
+      "license": "CC BY-SA 4.0"
+    },
+    {
+      "id": "wp-dns",
+      "library": "wikipedia-technology",
+      "title": "Domain Name System",
+      "kind": "wikipedia",
+      "filename": "wikipedia-domain-name-system.txt",
+      "license": "CC BY-SA 4.0"
+    },
+    {
+      "id": "pg-132",
+      "library": "classic-books",
+      "title": "The Art of War (Sun Tzu, Giles translation)",
+      "kind": "txt",
+      "url": "https://www.gutenberg.org/cache/epub/132/pg132.txt",
+      "filename": "gutenberg-132-the-art-of-war.txt",
+      "license": "Public domain (Project Gutenberg)"
+    },
+    {
+      "id": "pg-1952",
+      "library": "classic-books",
+      "title": "The Yellow Wallpaper (Charlotte Perkins Gilman)",
+      "kind": "txt",
+      "url": "https://www.gutenberg.org/cache/epub/1952/pg1952.txt",
+      "filename": "gutenberg-1952-the-yellow-wallpaper.txt",
+      "license": "Public domain (Project Gutenberg)"
+    },
+    {
+      "id": "pg-844",
+      "library": "classic-books",
+      "title": "The Importance of Being Earnest (Oscar Wilde)",
+      "kind": "txt",
+      "url": "https://www.gutenberg.org/cache/epub/844/pg844.txt",
+      "filename": "gutenberg-844-the-importance-of-being-earnest.txt",
+      "license": "Public domain (Project Gutenberg)"
+    },
+    {
+      "id": "pg-11",
+      "library": "classic-books",
+      "title": "Alice's Adventures in Wonderland (Lewis Carroll)",
+      "kind": "txt",
+      "url": "https://www.gutenberg.org/cache/epub/11/pg11.txt",
+      "filename": "gutenberg-11-alices-adventures-in-wonderland.txt",
+      "license": "Public domain (Project Gutenberg)"
+    },
+    {
+      "id": "pg-16",
+      "library": "classic-books",
+      "title": "Peter Pan (J. M. Barrie)",
+      "kind": "txt",
+      "url": "https://www.gutenberg.org/cache/epub/16/pg16.txt",
+      "filename": "gutenberg-16-peter-pan.txt",
+      "license": "Public domain (Project Gutenberg)"
+    },
+    {
+      "id": "pg-36",
+      "library": "classic-books",
+      "title": "The War of the Worlds (H. G. Wells)",
+      "kind": "txt",
+      "url": "https://www.gutenberg.org/cache/epub/36/pg36.txt",
+      "filename": "gutenberg-36-the-war-of-the-worlds.txt",
+      "license": "Public domain (Project Gutenberg)"
+    },
+    {
+      "id": "fed-explained",
+      "library": "money-and-home",
+      "title": "Federal Reserve: The Fed Explained, What the Central Bank Does (11th ed.)",
+      "kind": "pdf",
+      "url": "https://www.federalreserve.gov/aboutthefed/files/the-fed-explained.pdf",
+      "filename": "federal-reserve-the-fed-explained.pdf",
+      "license": "Public domain (US government work)"
+    },
+    {
+      "id": "fed-pf1",
+      "library": "money-and-home",
+      "title": "Federal Reserve: Overview of the Federal Reserve System (Purposes & Functions, ch. 1)",
+      "kind": "pdf",
+      "url": "https://www.federalreserve.gov/aboutthefed/files/pf_1.pdf",
+      "filename": "federal-reserve-purposes-and-functions-ch1.pdf",
+      "license": "Public domain (US government work)"
+    },
+    {
+      "id": "epa-renovate-right",
+      "library": "home-hazards",
+      "title": "EPA: Renovate Right, Important Lead Hazard Information for Families",
+      "kind": "pdf",
+      "url": "https://www.epa.gov/sites/default/files/documents/renovaterightbrochure.pdf",
+      "filename": "epa-renovate-right-lead-hazard-brochure.pdf",
+      "license": "Public domain (US government work)"
+    },
+    {
+      "id": "nhlbi-phy-active",
+      "library": "health-guides",
+      "title": "NHLBI: Your Guide to Physical Activity and Your Heart",
+      "kind": "pdf",
+      "url": "https://www.nhlbi.nih.gov/files/docs/public/heart/phy_active.pdf",
+      "filename": "nhlbi-your-guide-to-physical-activity-and-your-heart.pdf",
+      "license": "Public domain (US government work)"
+    },
+    {
+      "id": "pg-1",
+      "library": "us-founding-documents",
+      "title": "The Declaration of Independence of the United States of America",
+      "kind": "txt",
+      "url": "https://www.gutenberg.org/cache/epub/1/pg1.txt",
+      "filename": "gutenberg-1-declaration-of-independence.txt",
+      "license": "Public domain (Project Gutenberg)"
+    },
+    {
+      "id": "pg-2",
+      "library": "us-founding-documents",
+      "title": "The United States Bill of Rights",
+      "kind": "txt",
+      "url": "https://www.gutenberg.org/cache/epub/2/pg2.txt",
+      "filename": "gutenberg-2-bill-of-rights.txt",
+      "license": "Public domain (Project Gutenberg)"
+    },
+    {
+      "id": "pg-5",
+      "library": "us-founding-documents",
+      "title": "The United States Constitution",
+      "kind": "txt",
+      "url": "https://www.gutenberg.org/cache/epub/5/pg5.txt",
+      "filename": "gutenberg-5-united-states-constitution.txt",
+      "license": "Public domain (Project Gutenberg)"
+    },
+    {
+      "id": "pg-1404",
+      "library": "us-founding-documents",
+      "title": "The Federalist Papers (Hamilton, Madison, Jay)",
+      "kind": "txt",
+      "url": "https://www.gutenberg.org/cache/epub/1404/pg1404.txt",
+      "filename": "gutenberg-1404-the-federalist-papers.txt",
+      "license": "Public domain (Project Gutenberg)",
+      "split_parts": 4,
+      "notes": "Split into 4 parts at paragraph boundaries: the whole book exceeds the app's 500-chunks-per-file upload limit, which is also how a user would upload it."
+    },
+    {
+      "id": "pg-3",
+      "library": "us-founding-documents",
+      "title": "John F. Kennedy's Inaugural Address",
+      "kind": "txt",
+      "url": "https://www.gutenberg.org/cache/epub/3/pg3.txt",
+      "filename": "gutenberg-3-jfk-inaugural-address.txt",
+      "license": "Public domain (Project Gutenberg)"
+    },
+    {
+      "id": "pg-8",
+      "library": "us-founding-documents",
+      "title": "Abraham Lincoln's Second Inaugural Address",
+      "kind": "txt",
+      "url": "https://www.gutenberg.org/cache/epub/8/pg8.txt",
+      "filename": "gutenberg-8-lincoln-second-inaugural-address.txt",
+      "license": "Public domain (Project Gutenberg)"
+    },
+    {
+      "id": "usgs-dynamic-earth",
+      "library": "earth-and-space",
+      "title": "USGS: This Dynamic Earth, The Story of Plate Tectonics",
+      "kind": "pdf",
+      "url": "https://nehrpsearch.nist.gov/static/files/USGS/PB2004101893.pdf",
+      "filename": "usgs-this-dynamic-earth.pdf",
+      "license": "Public domain (US government work)"
+    },
+    {
+      "id": "usgs-dynamic-planet",
+      "library": "earth-and-space",
+      "title": "USGS: This Dynamic Planet, World Map of Volcanoes, Earthquakes, Impact Craters and Plate Tectonics",
+      "kind": "pdf",
+      "url": "https://pubs.usgs.gov/pdf/planet.pdf",
+      "filename": "usgs-this-dynamic-planet.pdf",
+      "license": "Public domain (US government work)"
+    },
+    {
+      "id": "nasa-artemis-ii-press-kit",
+      "library": "earth-and-space",
+      "title": "NASA: Artemis II Press Kit",
+      "kind": "pdf",
+      "url": "https://www.nasa.gov/wp-content/uploads/2026/01/artemis-ii-press-kit.pdf",
+      "filename": "nasa-artemis-ii-press-kit.pdf",
+      "license": "Public domain (US government work)"
+    },
+    {
+      "id": "nasa-webb-fact-sheet",
+      "library": "earth-and-space",
+      "title": "NASA: James Webb Space Telescope fact sheet",
+      "kind": "pdf",
+      "url": "https://science.nasa.gov/wp-content/uploads/2024/08/webbfactsheet.pdf",
+      "filename": "nasa-webb-fact-sheet.pdf",
+      "license": "Public domain (US government work)"
+    },
+    {
+      "id": "fed-pf3",
+      "library": "money-and-home",
+      "title": "Federal Reserve: Conducting Monetary Policy (Purposes & Functions, ch. 3)",
+      "kind": "pdf",
+      "url": "https://www.federalreserve.gov/aboutthefed/files/pf_3.pdf",
+      "filename": "federal-reserve-purposes-and-functions-ch3-monetary-policy.pdf",
+      "license": "Public domain (US government work)"
+    },
+    {
+      "id": "fed-pf4",
+      "library": "money-and-home",
+      "title": "Federal Reserve: Promoting Financial System Stability (Purposes & Functions, ch. 4)",
+      "kind": "pdf",
+      "url": "https://www.federalreserve.gov/aboutthefed/files/pf_4.pdf",
+      "filename": "federal-reserve-purposes-and-functions-ch4-financial-stability.pdf",
+      "license": "Public domain (US government work)"
+    }
+  ],
+  "dropped_sources": [
+    {
+      "id": "ssa-10035",
+      "url": "https://www.ssa.gov/pubs/EN-05-10035.pdf",
+      "why": "host blocks scripted downloads (403)"
+    },
+    {
+      "id": "ssa-10024",
+      "url": "https://www.ssa.gov/pubs/EN-05-10024.pdf",
+      "why": "host blocks scripted downloads (403)"
+    },
+    {
+      "id": "ssa-10029",
+      "url": "https://www.ssa.gov/pubs/EN-05-10029.pdf",
+      "why": "host blocks scripted downloads (403)"
+    },
+    {
+      "id": "ssa-10084",
+      "url": "https://www.ssa.gov/pubs/EN-05-10084.pdf",
+      "why": "host blocks scripted downloads (403)"
+    },
+    {
+      "id": "ssa-10043",
+      "url": "https://www.ssa.gov/pubs/EN-05-10043.pdf",
+      "why": "host blocks scripted downloads (403)"
+    },
+    {
+      "id": "ssa-10069",
+      "url": "https://www.ssa.gov/pubs/EN-05-10069.pdf",
+      "why": "host blocks scripted downloads (403)"
+    },
+    {
+      "id": "cfpb-managing-someone-money",
+      "url": "https://files.consumerfinance.gov/f/documents/cfpb_msem_power-of-attorney_2019-10.pdf",
+      "why": "403"
+    },
+    {
+      "id": "fdic-money-smart-bank",
+      "url": "https://www.fdic.gov/sites/default/files/2024-03/money-smart-for-adults-module-1-your-money-values-and-influences-participant-guide.pdf",
+      "why": "404"
+    },
+    {
+      "id": "ftc-identity-theft",
+      "url": "https://www.consumer.ftc.gov/sites/default/files/articles/pdf/pdf-0009_identitytheft_a_recovery_plan.pdf",
+      "why": "404"
+    },
+    {
+      "id": "hud-buying-home",
+      "url": "https://www.hud.gov/sites/documents/SETTLEMENT-COST-BOOKLET.PDF",
+      "why": "404"
+    },
+    {
+      "id": "dietary-guidelines-2020",
+      "url": "https://www.dietaryguidelines.gov/sites/default/files/2020-12/Dietary_Guidelines_for_Americans_2020-2025.pdf",
+      "why": "exceeds the app's 10 MB upload limit"
+    },
+    {
+      "id": "physical-activity-guidelines",
+      "url": "https://health.gov/sites/default/files/2019-09/Physical_Activity_Guidelines_2nd_edition.pdf",
+      "why": "exceeds the app's 10 MB upload limit"
+    },
+    {
+      "id": "nia-exercise",
+      "url": "https://order.nia.nih.gov/sites/default/files/2018-04/nia-exercise-guide.pdf",
+      "why": "404 (405)"
+    },
+    {
+      "id": "fema-are-you-ready",
+      "url": "https://www.ready.gov/sites/default/files/2021-02/are-you-ready-guide.pdf",
+      "why": "host blocks scripted downloads (403)"
+    },
+    {
+      "id": "fema-p320",
+      "url": "https://www.fema.gov/sites/default/files/2020-08/fema_taking-shelter-from-the-storm_p-320.pdf",
+      "why": "host blocks scripted downloads (403)"
+    },
+    {
+      "id": "usfa-home-fire",
+      "url": "https://www.usfa.fema.gov/downloads/pdf/publications/home_fire_safety_checklist.pdf",
+      "why": "404"
+    },
+    {
+      "id": "uscis-m476",
+      "url": "https://www.uscis.gov/sites/default/files/document/guides/M-476.pdf",
+      "why": "host blocks scripted downloads (403)"
+    },
+    {
+      "id": "uscis-100q",
+      "url": "https://www.uscis.gov/sites/default/files/document/questions-and-answers/100q.pdf",
+      "why": "host blocks scripted downloads (403)"
+    },
+    {
+      "id": "uscis-m618",
+      "url": "https://www.uscis.gov/sites/default/files/document/guides/M-618.pdf",
+      "why": "host blocks scripted downloads (403)"
+    },
+    {
+      "id": "uscis-m1051",
+      "url": "https://www.uscis.gov/sites/default/files/document/guides/M-76.pdf",
+      "why": "host blocks scripted downloads (403)"
+    },
+    {
+      "id": "cfpb-ymyg",
+      "url": "https://files.consumerfinance.gov/f/documents/cfpb_your-money-your-goals_financial-empowerment_toolkit.pdf",
+      "why": "files.consumerfinance.gov blocks scripted downloads (403)"
+    },
+    {
+      "id": "cfpb-ymyg-implementation",
+      "url": "https://files.consumerfinance.gov/f/201504_cfpb_ymyg_implementation-guide.pdf",
+      "why": "files.consumerfinance.gov blocks scripted downloads (403)"
+    }
   ]
 }

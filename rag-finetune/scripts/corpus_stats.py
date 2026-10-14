@@ -23,6 +23,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
 import sys
 from collections import defaultdict
 from pathlib import Path
@@ -76,10 +77,16 @@ def main() -> int:
             r = json.loads(line)
             by_doc[r["documentName"]].append(r)
 
+    def manifest_name(name: str) -> str:
+        # fetch_corpus.py splits long texts into "<stem>-partNofM<ext>" files.
+        m = re.match(r"^(.*)-part\d+of\d+(\.[^.]+)$", name)
+        return f"{m.group(1)}{m.group(2)}" if m else name
+
     docs = []
     for name, rows in sorted(by_doc.items()):
         s = doc_stats(rows)
-        docs.append({"documentName": name, "library": lib_of.get(name, "?"), "title": title_of.get(name, name), **s, "verdict": verdict(s)})
+        base = manifest_name(name)
+        docs.append({"documentName": name, "library": lib_of.get(base, "?"), "title": title_of.get(base, name), **s, "verdict": verdict(s)})
 
     libs: dict[str, dict] = defaultdict(lambda: {"docs": 0, "chunks": 0, "ok": 0, "pdf": 0})
     for d in docs:

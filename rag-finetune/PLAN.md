@@ -45,8 +45,10 @@ answers from the local vLLM base model with zero UI changes; the retrieval
 gate matches its baseline (hybrid 1.000 / 0.944). In-app on the 12 Aurora
 questions, re-scored under the lenient rule adopted 2026-10-13 (q1 excluded):
 gpt-4o-mini 45.5% lenient / 0% strict citation precision, base 4B 30% / 30%.
-Contract sha256 is now `00e407e9…`. Phase 1 corpus manifest and fetcher are
-in place (`data/corpus-manifest.json`, `scripts/fetch_corpus.py`). Measured on
+Contract sha256 is now `00e407e9…`. **Phase 1 corpus collected:** 101 public
+documents (45 PDFs) in 16 libraries, 12,735 chunks via the app's ingestion,
+report in `results/phase1/corpus-report.md`. Next: contexts, teacher
+generation, filters, split, Hub push. Measured on
 the RTX 3060: vLLM serves the 4B in bf16 at 10.9 GB with torch.compile and
 CUDA graphs (FlashInfer sampler off, no CUDA toolkit in WSL); QLoRA r=16
 trains the 4B at about 600 tokens/s (3.4 GB peak) and the 1.7B at about

@@ -109,13 +109,53 @@ def verify(entry: dict, blob: bytes) -> str | None:
     return None
 
 
+def split_text(blob: bytes, parts: int) -> list[bytes]:
+    """Split text into `parts` pieces of similar size at paragraph boundaries."""
+    text = blob.decode("utf-8").replace("\r\n", "\n").replace("\r", "\n")
+    target = len(text) / parts
+
+    def pack(units: list[str], glue: str) -> list[str]:
+        out: list[str] = []
+        current: list[str] = []
+        size = 0
+        for unit in units:
+            current.append(unit)
+            size += len(unit) + len(glue)
+            if size >= target and len(out) < parts - 1:
+                out.append(glue.join(current))
+                current, size = [], 0
+        if current:
+            out.append(glue.join(current))
+        return out
+
+    pieces = pack(text.split("\n\n"), "\n\n")
+    if len(pieces) < parts:
+        pieces = pack(text.split("\n"), "\n")
+    if len(pieces) < parts:
+        step = -(-len(text) // parts)
+        pieces = [text[i : i + step] for i in range(0, len(text), step)]
+    if len(pieces) != parts:
+        raise RuntimeError(f"could not split into {parts} parts (got {len(pieces)})")
+    return [piece.encode("utf-8") for piece in pieces]
+
+
 def process(entry: dict, *, check: bool, force: bool) -> tuple[dict | None, dict | None, str]:
     """Fetch/verify one entry. Returns (document_record, failure_record, log_line)."""
     dest = RAW / entry["library"] / entry["filename"]
     dest.parent.mkdir(parents=True, exist_ok=True)
     url = wikipedia_url(entry["title"]) if entry["kind"] == "wikipedia" else entry["url"]
     label = f"{entry['library']}/{entry['filename']}"
-    status = "present" if dest.exists() and not force else "missing"
+    # Why split_parts: the app caps uploads at 500 chunks per file, so a long
+    # book is stored as several files, exactly as a user would upload it.
+    parts = int(entry.get("split_parts", 1))
+
+    def part_path(i: int) -> Path:
+        if parts == 1:
+            return dest
+        return dest.with_name(f"{dest.stem}-part{i}of{parts}{dest.suffix}")
+
+    paths = [part_path(i) for i in range(1, parts + 1)]
+    status = "present" if all(p.exists() for p in paths) and not force else "missing"
     if status == "missing":
         if check:
             return None, None, f"  missing  {label}"
@@ -126,12 +166,16 @@ def process(entry: dict, *, check: bool, force: bool) -> tuple[dict | None, dict
             reason = verify(entry, blob)
             if reason:
                 raise RuntimeError(reason)
-            dest.write_bytes(blob)
+            if parts > 1:
+                for path, piece in zip(paths, split_text(blob, parts)):
+                    path.write_bytes(piece)
+            else:
+                dest.write_bytes(blob)
             status = "fetched"
         except Exception as ex:  # noqa: BLE001
             failure = {"id": entry["id"], "library": entry["library"], "url": url, "reason": str(ex)[:200]}
             return None, failure, f"  FAIL     {label}: {str(ex)[:110]}"
-    blob = dest.read_bytes()
+    blob = b"\n\n".join(p.read_bytes() for p in paths)
     reason = verify(entry, blob)
     if reason:
         failure = {"id": entry["id"], "library": entry["library"], "url": url, "reason": reason}
