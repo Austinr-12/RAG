@@ -399,3 +399,14 @@ Conventions:
   lenient rule, length, gold-cited, abstention correctness, dedup, second
   teacher check on negatives), split by library, push to the HF Hub with the
   contract hash `00e407e9…` in the card.
+
+### 2026-10-23 — Phase 1 build: decisions and first modules
+
+- Decisions (user): teacher gpt-4o-mini (keep token spend low); judge a
+  cheap newer OpenAI model; test libraries `health-guides` +
+  `wikipedia-technology`, validation `rust-book`; user spot-checks the
+  Aurora questions and 25 judge labels. Hub dataset defaults to private
+  `rag-grounded-answers`. Design written into PLAN.md ("Phase 1 build
+  design").
+- Starting with `ragft/corpus.py` and `ragft/retrieval_sim.py` plus tests;
+  no API calls until the teacher dry run.

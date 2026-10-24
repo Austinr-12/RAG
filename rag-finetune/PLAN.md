@@ -292,6 +292,32 @@ embeddings still going to OpenAI, and `npm test` passes.
 **Exit:** the dataset is on the Hub, filter rejection rates are recorded, and
 50 random examples have been read by hand.
 
+#### Phase 1 build design (decided 2026-10-23)
+
+Decisions: teacher stays gpt-4o-mini (cost; the filter chain enforces
+faithfulness regardless). Judge: a different, newer small OpenAI model,
+validated on 50 hand labels. Held out by library: test = `health-guides`
+(PDFs) and `wikipedia-technology` (text) plus the Aurora slice; validation =
+`rust-book`; the other 13 libraries train. Hub: private dataset
+`rag-grounded-answers` under the user's account until the card and license
+review are done. Sampling is capped per document so the large IRS and NIST
+files do not dominate.
+
+Modules, all reading the contract rather than re-typing it:
+
+| Module | Job |
+|---|---|
+| `ragft/corpus.py` | chunks.jsonl + manifest → documents with library, filename, title, neighbor links (chunk index ±1); `-partNofM` files map back to their manifest entry |
+| `ragft/retrieval_sim.py` | stdlib BM25 per library; answerable context = gold chunk(s) + plausible same-library chunks, gold position shuffled; hard negative = top-k with the gold chunk and its overlapping neighbors removed; about 10% short contexts; about 30% title-style document names |
+| `ragft/teacher.py` | question generation from a gold chunk, then answer generation through `build_messages` with the production system prompt; five example types in the plan's mix; second call confirms each negative |
+| `ragft/filters.py` | the filter chain with a counter per filter, written to the stats file |
+| `ragft/split.py` | split by library; writes train/val/test JSONL |
+| `scripts/build_dataset.py` | orchestrates sampling, generation, filtering, splitting, stats and the dataset card; `scripts/push_dataset.py` uploads to the Hub |
+
+Budget: under $10 of OpenAI usage for about 4,500 generated candidates.
+Order of work: corpus + retrieval simulation with tests (no API), then
+teacher on a 50-example dry run read by hand, then the full build.
+
 ### Phase 2: baseline eval (4 to 5 days)
 
 - **One client path.** Every model is called through an OpenAI-compatible chat
