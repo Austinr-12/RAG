@@ -81,16 +81,26 @@ class ChatClient:
         *,
         seed: int | None = None,
         extra_body: Mapping[str, Any] | None = None,
+        temperature: float | None = None,
+        max_tokens: int | None = None,
+        json_mode: bool = False,
     ) -> ChatResult:
-        """Stream one completion with the contract's temperature and output cap."""
+        """Stream one completion with the contract's temperature and output cap.
+
+        Evaluation always uses the contract defaults. The overrides exist for
+        the dataset builder's side calls (question generation, checks), which
+        are not production answers and may use JSON mode or more randomness.
+        """
         kwargs: dict[str, Any] = {
             "model": self.endpoint.model,
             "messages": list(messages),
-            "temperature": self.contract.temperature,
-            "max_tokens": self.contract.max_output_tokens,
+            "temperature": self.contract.temperature if temperature is None else temperature,
+            "max_tokens": self.contract.max_output_tokens if max_tokens is None else max_tokens,
             "stream": True,
             "stream_options": {"include_usage": True},
         }
+        if json_mode:
+            kwargs["response_format"] = {"type": "json_object"}
         if seed is not None:
             kwargs["seed"] = seed
         if extra_body:
