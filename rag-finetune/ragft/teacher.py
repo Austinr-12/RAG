@@ -133,7 +133,7 @@ def _render_passages(sources: Sequence[Mapping[str, str]]) -> str:
 
 
 class Teacher:
-    def __init__(self, client: ChatClient, contract: Contract, cache: ResponseCache | None = None):
+    def __init__(self, client: "ChatClient", contract: Contract, cache: ResponseCache | None = None):
         self.client = client
         self.contract = contract
         self.cache = cache or ResponseCache()
