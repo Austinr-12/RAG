@@ -15,7 +15,7 @@ Conventions:
 
 | Thing | Location |
 |---|---|
-| Code (git-tracked, edited from Windows) | `C:\dev\RAG\rag-finetune` = `/mnt/c/dev/RAG/rag-finetune` in Ubuntu |
+| Code (git-tracked, edited from Windows) | `D:\dev\RAG\rag-finetune` = `/mnt/d/dev/RAG/rag-finetune` in Ubuntu (moved from C: on 2026-10-30; the move script rewrites the remaining `/mnt/c` paths) |
 | Ubuntu distro disk image | `D:\wsl\Ubuntu\ext4.vhdx` (moved from C: on 2026-10-11) |
 | WSL global config | `C:\Users\austi\.wslconfig` |
 | Python venv | `~/.venvs/ragft` in Ubuntu (Linux filesystem, not /mnt/c) |
@@ -116,7 +116,7 @@ Conventions:
 
 **Resume checklist for tomorrow (idle GPU, nothing else using VRAM):**
 
-1. `wsl -d Ubuntu -- bash /mnt/c/dev/RAG/rag-finetune/scripts/check-env.sh`
+1. `wsl -d Ubuntu -- bash /mnt/d/dev/RAG/rag-finetune/scripts/check-env.sh`
    should show the full stack and the GPU with under 1 GB used.
 2. Serve: `bash scripts/serve-bg.sh` (prints READY), then
    `source ~/.venvs/ragft/bin/activate && python scripts/smoke_serve.py --json outputs/smoke/serve-base.json`.
@@ -410,3 +410,56 @@ Conventions:
   design").
 - Starting with `ragft/corpus.py` and `ragft/retrieval_sim.py` plus tests;
   no API calls until the teacher dry run.
+- **Teacher dry run done (2026-10-23, 30 candidates, 71 calls, 75 s, a
+  few cents).** 9/30 kept. Rejections: `unknown_document_name` 33% (the
+  teacher shortens long display names, e.g. drops "(Oscar Wilde)" from a
+  title), `quote_not_verbatim` 23% (trailing "...", small edits),
+  `no_citation` 10% (all three two_gold candidates: relational "how does X
+  relate to Y" questions made the teacher abstain), `gold_not_cited` 3%.
+  Side rejections: two_gold spans not in passage 5, negative still
+  answerable 2 (the confirm call works). Negatives: 5/5 kept, canonical
+  sentence + a one-line "The sources cover…" description. Name styles and
+  short contexts appear in the expected proportions. Build modules
+  committed by the user (`c05e197`).
+- **Queued before the full build** (next session, in this order):
+  1. Programmatic repair in `filters.py` for near misses, counted in the
+     stats: a cited name that is a unique case-insensitive prefix/substring
+     of one provided document name → exact name; a quote that differs only
+     by trailing ellipsis/punctuation or that fuzzy-matches one exact span
+     of the same length → exact span. Repairs make targets exact, which is
+     the training goal; the student must never learn the near-miss.
+  2. Two-passage prompt: ask for one question with two factual parts (one
+     per passage), not a relationship essay.
+  3. Thread pool (4 to 6 workers) in `build_dataset.py`; the cache makes
+     re-runs free. Expected full build: ~4,500 candidates, ~10k calls,
+     roughly $3 to $5, under an hour with concurrency.
+  4. 100-candidate dry run read by hand, then `--target 3000`, then
+     `scripts/corpus_stats.py`-style review of `results/phase1/dataset-stats.json`.
+
+### 2026-10-30 — relocating the project and VS Code to D:
+
+- C: was down to 3.5 GB free (Marvel Rivals 90 GB and a 110 GB stalled
+  Steam download were the real cause; the user removed Marvel Rivals).
+  `node_modules` and `.next` deleted here (reinstalled by the move script).
+- Move prepared, not yet run: `D:\dev\move-to-d.ps1` (+ `move-to-d-wsl.sh`),
+  to be run by the user after closing every VS Code window:
+  `powershell -ExecutionPolicy Bypass -File D:\dev\move-to-d.ps1`. It moves
+  the repo to `D:\dev\RAG`, rewrites `/mnt/d/dev/RAG` → `/mnt/d/dev/RAG` in
+  `rag-finetune/scripts/*.sh`, this file and the Ubuntu `ragft` alias,
+  reinstalls VS Code into `D:\Programs\Microsoft VS Code`, moves VS Code
+  user data and extensions to `D:\VSCodeData` behind junctions, runs
+  `npm ci`, and reopens VS Code on `D:\dev\RAG`. Log: `D:\dev\move-to-d.log`.
+- Claude memory notes copied to the new project key (`d--dev-RAG`) with a
+  relocation note, so the first session on D: has the same context.
+
+**Resume checklist for the first session on D:**
+
+1. `git status` should show only this file and the `.sh` path rewrites;
+   the user commits. Confirm `D:\dev\RAG` is the only copy (C:\dev\RAG gone).
+2. `wsl -d Ubuntu -- bash /mnt/d/dev/RAG/rag-finetune/scripts/check-env.sh`
+   and `python tests/*.py` (stdlib tests run on Windows Python; the teacher
+   needs the Ubuntu venv).
+3. If `npm ci` did not run, run it in `rag-knowledge-base`; `npm test`.
+4. Update the "Where things live" table at the top of this file (paths now
+   on D:) if the script's rewrite missed any.
+5. Continue Phase 1 with the queued items above.

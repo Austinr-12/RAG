@@ -10,7 +10,7 @@
 set -euo pipefail
 
 VENV="$HOME/.venvs/ragft"
-CODE="/mnt/c/dev/RAG/rag-finetune"
+CODE="/mnt/d/dev/RAG/rag-finetune"
 
 if [[ "${1:-}" == "--system" ]]; then
   export DEBIAN_FRONTEND=noninteractive
@@ -34,7 +34,7 @@ if ! grep -q 'rag-finetune' "$HOME/.bashrc"; then
 # rag-finetune
 export HF_HOME="$HOME/hf"
 export PATH="$HOME/.local/bin:$PATH"
-alias ragft='source "$HOME/.venvs/ragft/bin/activate" && cd /mnt/c/dev/RAG/rag-finetune'
+alias ragft='source "$HOME/.venvs/ragft/bin/activate" && cd /mnt/d/dev/RAG/rag-finetune'
 RC
 fi
 

@@ -10,7 +10,7 @@
 set -euo pipefail
 export PATH="$HOME/.local/bin:$PATH"
 VENV="${VENV:-$HOME/.venvs/ragft}"
-CODE="${CODE:-/mnt/c/dev/RAG/rag-finetune}"
+CODE="${CODE:-/mnt/d/dev/RAG/rag-finetune}"
 trap 'echo INSTALL_FAILED' ERR
 
 cd "$CODE"

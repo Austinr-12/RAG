@@ -11,7 +11,7 @@ set -uo pipefail
 if [[ $# -lt 2 ]]; then echo "usage: run-bg.sh <name> <command...>" >&2; exit 2; fi
 NAME="$1"; shift
 LOG="$HOME/$NAME.log"
-CODE="${CODE:-/mnt/c/dev/RAG/rag-finetune}"
+CODE="${CODE:-/mnt/d/dev/RAG/rag-finetune}"
 VENV="${VENV:-$HOME/.venvs/ragft}"
 export HF_HOME="${HF_HOME:-$HOME/hf}"
 export PYTHONUNBUFFERED=1   # stream logs line by line; a killed run still leaves its output

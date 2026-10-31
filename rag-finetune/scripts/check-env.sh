@@ -8,7 +8,7 @@
 # session to see what state the machine is in.
 set -uo pipefail
 VENV="${VENV:-$HOME/.venvs/ragft}"
-CODE="${CODE:-/mnt/c/dev/RAG/rag-finetune}"
+CODE="${CODE:-/mnt/d/dev/RAG/rag-finetune}"
 export HF_HOME="${HF_HOME:-$HOME/hf}"
 cd "$CODE"
 PY="$VENV/bin/python"
