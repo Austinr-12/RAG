@@ -15,7 +15,7 @@ Conventions:
 
 | Thing | Location |
 |---|---|
-| Code (git-tracked, edited from Windows) | `D:\dev\RAG\rag-finetune` = `/mnt/d/dev/RAG/rag-finetune` in Ubuntu (moved from C: on 2026-10-30; the move script rewrites the remaining `/mnt/c` paths) |
+| Code (git-tracked, edited from Windows) | `D:\dev\RAG\rag-finetune` = `/mnt/d/dev/RAG/rag-finetune` in Ubuntu (moved from C: on 2026-10-30) |
 | Ubuntu distro disk image | `D:\wsl\Ubuntu\ext4.vhdx` (moved from C: on 2026-10-11) |
 | WSL global config | `C:\Users\austi\.wslconfig` |
 | Python venv | `~/.venvs/ragft` in Ubuntu (Linux filesystem, not /mnt/c) |
@@ -441,25 +441,38 @@ Conventions:
 - C: was down to 3.5 GB free (Marvel Rivals 90 GB and a 110 GB stalled
   Steam download were the real cause; the user removed Marvel Rivals).
   `node_modules` and `.next` deleted here (reinstalled by the move script).
-- Move prepared, not yet run: `D:\dev\move-to-d.ps1` (+ `move-to-d-wsl.sh`),
-  to be run by the user after closing every VS Code window:
-  `powershell -ExecutionPolicy Bypass -File D:\dev\move-to-d.ps1`. It moves
-  the repo to `D:\dev\RAG`, rewrites `/mnt/d/dev/RAG` → `/mnt/d/dev/RAG` in
-  `rag-finetune/scripts/*.sh`, this file and the Ubuntu `ragft` alias,
-  reinstalls VS Code into `D:\Programs\Microsoft VS Code`, moves VS Code
-  user data and extensions to `D:\VSCodeData` behind junctions, runs
-  `npm ci`, and reopens VS Code on `D:\dev\RAG`. Log: `D:\dev\move-to-d.log`.
+- Move script `D:\dev\move-to-d.ps1` (+ `move-to-d-wsl.sh`), run by the user
+  with every VS Code window closed
+  (`powershell -ExecutionPolicy Bypass -File D:\dev\move-to-d.ps1`). It
+  moved the repo to `D:\dev\RAG`, rewrote the old `/mnt/c` repo path to
+  `/mnt/d/dev/RAG` in `rag-finetune/scripts/*.sh`, this file and the Ubuntu
+  `ragft` alias, reinstalled VS Code into `D:\Programs\Microsoft VS Code`,
+  moved VS Code user data and extensions to `D:\VSCodeData` behind
+  junctions, ran `npm ci`, and reopened VS Code on `D:\dev\RAG`.
+  Log: `D:\dev\move-to-d.log`. The first attempt (19:57) stopped on
+  robocopy exit 9; the rerun (20:00) found every file already on D: and
+  finished the remaining steps. Nothing is missing (see below).
 - Claude memory notes copied to the new project key (`d--dev-RAG`) with a
   relocation note, so the first session on D: has the same context.
 
-**Resume checklist for the first session on D:**
+**First session on D: (2026-10-30, later that evening) — move verified:**
 
-1. `git status` should show only this file and the `.sh` path rewrites;
-   the user commits. Confirm `D:\dev\RAG` is the only copy (C:\dev\RAG gone).
-2. `wsl -d Ubuntu -- bash /mnt/d/dev/RAG/rag-finetune/scripts/check-env.sh`
-   and `python tests/*.py` (stdlib tests run on Windows Python; the teacher
-   needs the Ubuntu venv).
-3. If `npm ci` did not run, run it in `rag-knowledge-base`; `npm test`.
-4. Update the "Where things live" table at the top of this file (paths now
-   on D:) if the script's rewrite missed any.
-5. Continue Phase 1 with the queued items above.
+- `git status`: this file and the four `.sh` path rewrites, plus `PLAN.md`
+  and `requirements.lock.txt`, whose `/mnt/c` paths were outside the
+  script's file list (rewritten by hand). `C:\dev\RAG` is gone, `git fsck`
+  is clean, all 101 manifest documents are in `data/raw` (the Federalist
+  Papers as four parts), both `.env` files are intact, and every file is
+  still LF (`git ls-files --eol`).
+- `check-env.sh` in Ubuntu: full stack, CUDA 13.0, RTX 3060 with 1.1 GB of
+  12 GB used. Windows `python tests/*.py`: 28 passed. `npm test`: 95
+  passed. The `ragft` alias points at `/mnt/d`. VS Code runs from
+  `D:\Programs\Microsoft VS Code` with `%APPDATA%\Code` and
+  `~\.vscode\extensions` junctioned into `D:\VSCodeData`. C: has 98 GB free.
+- Fixed: the venv's editable install of `ragft` still mapped to
+  `/mnt/c/dev/RAG/rag-finetune/ragft` (pip's `__editable__` finder stores
+  an absolute path, which the move script could not know about), so
+  `import ragft` from `scripts/` would have failed. Re-pointed with
+  `pip install --no-deps -e .` from `/mnt/d`; imports resolve to D: now.
+- Leftovers that can be deleted: `D:\dev\VSCodeUserSetup-x64.exe` (250 MB)
+  and the empty `C:\dev` folder.
+- Next: continue Phase 1 with the queued items above.

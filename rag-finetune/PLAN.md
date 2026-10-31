@@ -63,7 +63,7 @@ in quotation marks. Results in `results/smoke/`.
    confirm `free -g` inside Ubuntu shows about 10 GB.
 2. Ubuntu: `apt` build tools, `uv`, Python 3.12. Venv at `~/.venvs/ragft` and
    `HF_HOME=~/hf` on the Linux filesystem, because `/mnt/c` is slow. The code
-   stays in `/mnt/c/dev/RAG/rag-finetune` so the Windows IDE and git keep
+   stays in `/mnt/d/dev/RAG/rag-finetune` so the Windows IDE and git keep
    working.
 3. `pyproject.toml` in `rag-finetune`: install `vllm` first (it pins torch),
    then trl, peft, bitsandbytes, datasets, accelerate, wandb,
