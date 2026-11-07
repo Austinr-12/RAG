@@ -216,35 +216,63 @@ def _fuzzy_span(quote: str, texts: Sequence[str], max_chars: int) -> str | None:
     return best[1] if best else None
 
 
+def _loose_name(name: str) -> str:
+    """Case-folded letters and digits only, so "Alice's Adventures in
+    Wonderland" is found inside gutenberg-11-alices-adventures-in-wonderland.txt."""
+    return "".join(ch for ch in name.casefold() if ch.isalnum())
+
+
 def resolve_document_name(cited: str, names: Sequence[str]) -> tuple[str | None, str | None]:
     """Map a cited document name onto one of the provided source names.
 
     Returns ``(name, kind)``: ``kind`` is None for an exact match,
-    ``"document_name_case"`` when only letter case differed, or
-    ``"document_name_partial"`` when the cited name is a unique
-    case-insensitive substring of one source name (the teacher dropped an
-    author, an extension or a part label) or uniquely contains one source
-    name. ``(None, None)`` when nothing resolves unambiguously.
+    ``"document_name_case"`` when only letter case or spacing differed,
+    ``"document_name_partial"`` when, ignoring case and punctuation, the cited
+    name is a unique substring of one source name (the teacher wrote the book
+    title instead of the filename, or dropped an author, an extension or a
+    part label) or uniquely contains one source name, and
+    ``"document_name_fuzzy"`` when the cited name is within a small edit of
+    exactly one source name (a wrong circular number). ``(None, None)`` when
+    nothing resolves unambiguously. A resolved name is only as good as the
+    quote check that follows it: the quote must then be verbatim in that
+    document, or the example is rejected anyway.
     """
     if cited in names:
         return cited, None
     c = _flatten(cited).casefold()
-    if len(c) < MIN_NAME_CHARS:
-        return None, None
-    folded = [(n, _flatten(n).casefold()) for n in names]
-    same = [n for n, f in folded if f == c]
+    same = [n for n in names if _flatten(n).casefold() == c]
     if len(same) == 1:
         return same[0], "document_name_case"
-    inside = [n for n, f in folded if c in f]
+    lc = _loose_name(cited)
+    if len(lc) < MIN_NAME_CHARS:
+        return None, None
+    loose = [(n, _loose_name(n)) for n in names]
+    inside = [n for n, f in loose if lc in f]
     if len(inside) == 1:
         return inside[0], "document_name_partial"
-    around = [n for n, f in folded if len(f) >= MIN_NAME_CHARS and f in c]
+    around = [n for n, f in loose if len(f) >= MIN_NAME_CHARS and f in lc]
     if len(around) == 1:
         return around[0], "document_name_partial"
+    close = [n for n, f in loose if difflib.SequenceMatcher(None, lc, f, autojunk=False).ratio() >= FUZZY_MIN_RATIO]
+    if len(close) == 1:
+        return close[0], "document_name_fuzzy"
     return None, None
 
 
-def repair_quote(contract: Contract, quote: str, texts: Sequence[str]) -> tuple[str, str] | None:
+_HINT_WORD_RE = re.compile(r"[^\W_]{3,}")
+
+
+def _hint_tokens(text: str) -> set[str]:
+    return set(_HINT_WORD_RE.findall(text.casefold()))
+
+
+def _overlap(segment: str, hint: set[str]) -> float:
+    """Share of the segment's words that also appear in the hint."""
+    words = _hint_tokens(segment)
+    return len(words & hint) / len(words) if words else 0.0
+
+
+def repair_quote(contract: Contract, quote: str, texts: Sequence[str], hint: str = "") -> tuple[str, str] | None:
     """Turn a near-miss quote into the exact span of one of ``texts``
     (flattened source texts of the cited document).
 
@@ -252,8 +280,10 @@ def repair_quote(contract: Contract, quote: str, texts: Sequence[str]) -> tuple[
     or cannot be repaired. Kinds, in the order tried: ``quote_unwrapped``
     (wrapping or stray quotation marks), ``quote_trimmed`` (edge ellipsis or
     trailing punctuation), ``quote_normalized`` (case, quotation-mark or dash
-    style), ``quote_segment`` (the longest verbatim part of a quote stitched
-    with ellipses), ``quote_fuzzy`` (a small edit; the aligned source span).
+    style), ``quote_segment`` (one verbatim part of a quote stitched with
+    ellipses: the part that shares the most words with ``hint``, the gold span
+    and answer text, longest first on a tie), ``quote_fuzzy`` (a small edit;
+    the aligned source span).
     """
     original = _flatten(quote)
     if _found(original, texts):
@@ -268,11 +298,11 @@ def repair_quote(contract: Contract, quote: str, texts: Sequence[str]) -> tuple[
     if loose:
         return loose, "quote_normalized"
     parts = [p.strip(_OPENING_MARKS + _CLOSING_MARKS + " " + _TRAILING_PUNCT) for p in _ELLIPSIS_SPLIT_RE.split(edge)]
-    parts = sorted((p for p in parts if p), key=len, reverse=True)
-    if len(parts) > 1:
+    parts = [p for p in parts if len(p) >= MIN_SEGMENT_CHARS]
+    if len(parts) > 1 or (parts and parts[0] != trimmed):
+        hint_words = _hint_tokens(hint)
+        parts.sort(key=lambda p: (_overlap(p, hint_words), len(p)), reverse=True)
         for p in parts:
-            if len(p) < MIN_SEGMENT_CHARS:
-                break
             if _found(p, texts):
                 return p, "quote_segment"
             hit = _find_loose(p, texts)
@@ -296,6 +326,11 @@ def repair_example(contract: Contract, ex: Example) -> list[dict]:
         return []
     pattern = contract.citation_pattern
     names = list(dict.fromkeys(s["documentName"] for s in ex.sources))
+    # What the quote is supposed to support: the generator's gold span(s) and
+    # the teacher's own answer prose. Used to pick between ellipsis segments.
+    spans = " ".join(str(ex.reference.get(k) or "") for k in ("answer_span", "answer_span_a", "answer_span_b"))
+    prose = " ".join(l for l in ex.target.split("\n") if not l.lstrip().startswith(">"))
+    hint = f"{spans} {prose}"
     repairs: list[dict] = []
     out: list[str] = []
     for raw_line in ex.target.split("\n"):
@@ -313,7 +348,7 @@ def repair_example(contract: Contract, ex: Example) -> list[dict]:
             repairs.append({"kind": kind, "from": name, "to": new_name})
         texts = [_flatten(s.get("normalized") or s["content"]) for s in ex.sources if s["documentName"] == new_name]
         new_quote = quote
-        fixed = repair_quote(contract, quote, texts)
+        fixed = repair_quote(contract, quote, texts, hint)
         if fixed:
             new_quote, qkind = fixed
             repairs.append({"kind": qkind, "from": quote, "to": new_quote})

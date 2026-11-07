@@ -133,6 +133,16 @@ def test_repair_quote_unwrapped_trimmed_normalized():
     assert repair_quote(CONTRACT, "one–year limited warranty", ["a one-year limited warranty"]) == ("one-year limited warranty", "quote_normalized")
 
 
+def test_repair_document_name_ignores_punctuation_and_fixes_one_wrong_digit():
+    names = ["gutenberg-11-alices-adventures-in-wonderland.txt", "gutenberg-16-peter-pan.txt"]
+    assert resolve_document_name("Alice's Adventures in Wonderland", names) == (names[0], "document_name_partial")
+    assert resolve_document_name("Peter Pan", names) == (names[1], "document_name_partial")
+    circ = ["Copyright Office Circular 1: Copyright Basics", "Copyright Office Circular 3: Copyright Notice"]
+    assert resolve_document_name("Copyright Office Circular 4: Copyright Basics", circ) == (circ[0], "document_name_fuzzy")
+    assert resolve_document_name("Copyright Basics", circ) == (circ[0], "document_name_partial")
+    assert resolve_document_name("Copyright Office Circular", circ) == (None, None)  # inside both
+
+
 def test_repair_quote_segment_and_fuzzy():
     texts = [TEXT]
     assert repair_quote(CONTRACT, "Every Aurora Notebook... from the date of purchase.", texts) == ("from the date of purchase", "quote_segment")
@@ -140,6 +150,17 @@ def test_repair_quote_segment_and_fuzzy():
         ("covered by a one-year limited warranty from the date of purchase.", "quote_fuzzy")
     assert repair_quote(CONTRACT, "a 12 month warranty applies", texts) is None
     assert repair_quote(CONTRACT, "Every Aurora... purchase", texts) is None  # segments too short to keep
+
+
+def test_repair_quote_segment_prefers_the_part_that_matches_the_gold_span():
+    texts = [TEXT]
+    q = "Every Aurora Notebook is covered... from the date of purchase."
+    assert repair_quote(CONTRACT, q, texts) == ("Every Aurora Notebook is covered", "quote_segment")  # longest wins without a hint
+    assert repair_quote(CONTRACT, q, texts, hint="from the date of purchase") == ("from the date of purchase", "quote_segment")
+    e = ex("single", f"The clock starts at purchase.\n> **{DOC}** — \"{q}\"", reference={"answer_span": "from the date of purchase"})
+    r = repair_example(CONTRACT, e)
+    assert [x["kind"] for x in r] == ["quote_segment"] and r[0]["to"] == "from the date of purchase"
+    assert check_example(CONTRACT, e) is None
 
 
 def test_repaired_example_passes_and_is_counted():
