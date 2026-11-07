@@ -42,6 +42,10 @@ MAX_CHARS = int(MAX_TOKENS * CHARS_PER_TOKEN)
 MIN_NAME_CHARS = 4
 MIN_SEGMENT_CHARS = 20
 FUZZY_MIN_RATIO = 0.9
+# A quote may start in the gold chunk and run past its edge into the
+# overlapping neighbor chunk (the app's chunks share 200 characters). It still
+# counts as citing the gold chunk when it shares at least this long a run.
+BOUNDARY_RUN_CHARS = 40
 
 
 @dataclass
@@ -134,13 +138,26 @@ def check_example(contract: Contract, ex: Example) -> str | None:
     return None
 
 
+def _shared_run(a: str, b: str) -> int:
+    """Length of the longest substring ``a`` and ``b`` have in common."""
+    if not a or not b:
+        return 0
+    return difflib.SequenceMatcher(None, a, b, autojunk=False).find_longest_match(0, len(a), 0, len(b)).size
+
+
 def _golds_cited(contract: Contract, ex: Example, cites: list[dict]) -> bool:
-    """Every gold chunk must be quoted by at least one valid citation."""
-    quotes = [_flatten(strip_wrapping_quotes(contract, c["quote"])) for c in cites if c["valid"]]
+    """Every gold chunk must be quoted by at least one valid citation: the
+    quote is inside the gold text, or it names the gold document and runs
+    from the gold text across the chunk edge into the neighbor chunk."""
+    valid = [(c["documentName"], _flatten(strip_wrapping_quotes(contract, c["quote"]))) for c in cites if c["valid"]]
     for g in ex.gold:
         text = _flatten(g.get("normalized", ""))
-        if not any(q and q in text for q in quotes):
-            return False
+        if any(q and q in text for _, q in valid):
+            continue
+        gold_names = {s["documentName"] for s in ex.sources if _flatten(s.get("normalized") or s["content"]) == text}
+        if any(n in gold_names and _shared_run(q, text) >= min(len(q), BOUNDARY_RUN_CHARS) for n, q in valid if q):
+            continue
+        return False
     return True
 
 
@@ -151,9 +168,11 @@ _EDGE_ELLIPSIS_RE = re.compile(r"^(?:\.{3,}|…)\s*|\s*(?:\.{3,}|…)$")
 _TRAILING_PUNCT = ".,;:!?"
 _OPENING_MARKS = "\"'“‘«‹"
 _CLOSING_MARKS = "\"'”’»›"
+# Every quotation mark, single or double, straight or curly, becomes one
+# symbol: the teacher writes 'United States work' for a source's
+# “United States work”, and apostrophes map consistently on both sides.
 _LOOSE_MAP: dict[int, str] = {
-    **{ord(c): '"' for c in "“”«»„"},
-    **{ord(c): "'" for c in "‘’‚`´"},
+    **{ord(c): "'" for c in "\"“”«»„‘’‚`´"},
     **{ord(c): "-" for c in "‐‑‒–—―"},
 }
 
@@ -283,7 +302,8 @@ def repair_quote(contract: Contract, quote: str, texts: Sequence[str], hint: str
     style), ``quote_segment`` (one verbatim part of a quote stitched with
     ellipses: the part that shares the most words with ``hint``, the gold span
     and answer text, longest first on a tie), ``quote_fuzzy`` (a small edit;
-    the aligned source span).
+    the aligned source span). ``repair_example`` adds ``quote_shortened`` for a
+    verbatim quote over the length limit (see ``shorten_quote``).
     """
     original = _flatten(quote)
     if _found(original, texts):
@@ -305,13 +325,34 @@ def repair_quote(contract: Contract, quote: str, texts: Sequence[str], hint: str
         for p in parts:
             if _found(p, texts):
                 return p, "quote_segment"
-            hit = _find_loose(p, texts)
+            hit = _find_loose(p, texts) or _fuzzy_span(p, texts, contract.max_quote_chars)
             if hit:
                 return hit, "quote_segment"
     span = _fuzzy_span(trimmed, texts, contract.max_quote_chars)
     if span:
         return span, "quote_fuzzy"
     return None
+
+
+def shorten_quote(quote: str, max_chars: int, hint: str = "") -> str | None:
+    """The best whole-word window of a verbatim quote that is longer than
+    ``max_chars``: the window that keeps the most words of ``hint`` (the gold
+    span and answer text), the longest on a tie. None when no word fits."""
+    words = quote.split(" ")
+    hint_words = _hint_tokens(hint)
+    best: tuple[tuple[int, int], str] | None = None
+    for i in range(len(words)):
+        j, length = i, -1
+        while j < len(words) and length + 1 + len(words[j]) <= max_chars:
+            length += 1 + len(words[j])
+            j += 1
+        if j == i:
+            continue
+        cand = " ".join(words[i:j])
+        key = (len(_hint_tokens(cand) & hint_words), len(cand))
+        if best is None or key > best[0]:
+            best = (key, cand)
+    return best[1] if best else None
 
 
 def repair_example(contract: Contract, ex: Example) -> list[dict]:
@@ -352,6 +393,12 @@ def repair_example(contract: Contract, ex: Example) -> list[dict]:
         if fixed:
             new_quote, qkind = fixed
             repairs.append({"kind": qkind, "from": quote, "to": new_quote})
+        flat_q = _flatten(strip_wrapping_quotes(contract, new_quote))
+        if len(flat_q) > contract.max_quote_chars and _found(flat_q, texts):
+            short = shorten_quote(flat_q, contract.max_quote_chars, hint)
+            if short:
+                repairs.append({"kind": "quote_shortened", "from": new_quote, "to": short})
+                new_quote = short
         if new_name != name or new_quote != quote:
             out.append(line[: m.start(1)] + new_name + line[m.end(1) : m.start(2)] + new_quote + line[m.end(2) :])
         else:

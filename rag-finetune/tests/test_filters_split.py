@@ -11,7 +11,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from ragft.contract import load_contract  # noqa: E402
-from ragft.filters import FilterStats, check_example, dedupe, repair_example, repair_quote, resolve_document_name  # noqa: E402
+from ragft.filters import FilterStats, check_example, dedupe, repair_example, repair_quote, resolve_document_name, shorten_quote  # noqa: E402
 from ragft.split import split_by_library  # noqa: E402
 from ragft.teacher import Example, canonical_abstention  # noqa: E402
 
@@ -212,6 +212,47 @@ def test_split_by_library_and_leak_check():
         assert "leak" in str(e)
     else:
         raise AssertionError("leak not detected")
+
+
+def test_repair_quote_unifies_all_quotation_marks_and_fuzzes_each_segment():
+    src = "The Copyright Act defines a “United States work” for the purposes of registration as (a) a pub- lished work that is first published in the United States."
+    assert repair_quote(CONTRACT, "defines a 'United States work' for the purposes", [src]) == \
+        ("defines a “United States work” for the purposes", "quote_normalized")
+    q = "The Copyright Act defines a 'United States work'... as (a) a published work that is first published in the United States"
+    hint = "a published work that is first published in the United States"
+    assert repair_quote(CONTRACT, q, [src], hint) == \
+        ("as (a) a pub- lished work that is first published in the United States.", "quote_segment")
+
+
+def test_shorten_quote_keeps_the_window_with_the_answer_words():
+    long_text = " ".join(f"word{i:02d}" for i in range(1, 41))  # 40 words, 279 chars
+    short = shorten_quote(long_text, 200, hint="word38 word39 word40")
+    assert short is not None and len(short) <= 200 and short in long_text and short.endswith("word40")
+    head = shorten_quote(long_text, 200, hint="word01 word02")
+    assert head.startswith("word01") and len(head) <= 200
+    assert shorten_quote("x" * 300, 200) is None
+    doc = "long-doc.txt"
+    srcs = [{"documentName": doc, "content": long_text, "normalized": long_text}]
+    e = ex("single", f"The last word is word40.\n> **{doc}** — {long_text}", sources=srcs,
+           gold=[{"document": doc, "index": 0, "normalized": long_text}], reference={"answer_span": "word40"})
+    r = repair_example(CONTRACT, e)
+    assert [x["kind"] for x in r] == ["quote_shortened"] and r[0]["to"].endswith("word40")
+    assert check_example(CONTRACT, e) is None
+
+
+def test_gold_counts_as_cited_when_the_quote_runs_into_the_neighbor_chunk():
+    doc = "gutenberg-132-the-art-of-war.txt"
+    gold_text = "Alas for these brave words! The long feud between the two states ended in 473 B.C. with the total defeat of Wu by Kou Chien and its"
+    neighbor = "The long feud between the two states ended in 473 B.C. with the total defeat of Wu by Kou Chien and its incorporation in Yueh. This was doubtless long after."
+    far = "The Martians are able to discharge enormous clouds of a black and poisonous vapour by means of rockets."
+    srcs = [{"documentName": doc, "content": gold_text, "normalized": gold_text},
+            {"documentName": doc, "content": neighbor, "normalized": neighbor},
+            {"documentName": doc, "content": far, "normalized": far}]
+    gold = [{"document": doc, "index": 193, "normalized": gold_text}]
+    spanning = f"In 473 B.C.\n> **{doc}** — The long feud between the two states ended in 473 B.C. with the total defeat of Wu by Kou Chien and its incorporation in Yueh"
+    assert check_example(CONTRACT, ex("single", spanning, sources=srcs, gold=gold)) is None
+    elsewhere = f"Rockets.\n> **{doc}** — The Martians are able to discharge enormous clouds of a black and poisonous vapour by means of rockets."
+    assert check_example(CONTRACT, ex("single", elsewhere, sources=srcs, gold=gold)) == "gold_not_cited"
 
 
 if __name__ == "__main__":
