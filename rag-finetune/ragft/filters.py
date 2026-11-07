@@ -206,14 +206,43 @@ def _find_loose(quote: str, texts: Sequence[str]) -> str | None:
     return None
 
 
-def _fuzzy_span(quote: str, texts: Sequence[str], max_chars: int) -> str | None:
-    """The source span the quote was almost certainly copied from: align on
-    the longest shared run, widen to word boundaries, accept only when the
-    span and the quote agree at FUZZY_MIN_RATIO or better."""
+def _edges_agree(lq: str, lspan: str) -> bool:
+    """The span must start and end on roughly the quote's first and last
+    words; otherwise the alignment slid onto a page marker or a chunk edge."""
+    qw, sw = lq.split(), lspan.split()
+    if not qw or not sw:
+        return False
+    first = difflib.SequenceMatcher(None, qw[0], sw[0], autojunk=False).ratio()
+    last = difflib.SequenceMatcher(None, qw[-1], sw[-1], autojunk=False).ratio()
+    return first >= 0.6 and last >= 0.6
+
+
+def _mid_word(text: str, i: int) -> bool:
+    """True when position ``i`` splits a word of ``text`` (non-space on both sides)."""
+    return 0 < i < len(text) and not text[i - 1].isspace() and not text[i].isspace()
+
+
+def _fuzzy_span(quote: str, texts: Sequence[str]) -> str | None:
+    """The source span the quote was almost certainly copied from.
+
+    Two candidates per text, best score wins: the window of the quote's length
+    aligned on the longest shared run and widened to whole words (accepted
+    when it agrees with the quote at FUZZY_MIN_RATIO and starts and ends on the
+    quote's own words), else the shared run itself trimmed to whole words
+    (accepted when it covers three quarters of the quote: the rest was a page
+    marker, a chunk edge or a word the source does not have). The result may
+    exceed the length limit; ``repair_example`` shortens it afterwards."""
     lq = _loose(quote)
     if len(lq) < MIN_SEGMENT_CHARS:
         return None
     best: tuple[float, str] | None = None
+
+    def offer(score: float, span: str) -> None:
+        nonlocal best
+        span = span.strip()
+        if span and (best is None or score > best[0]):
+            best = (score, span)
+
     for t in texts:
         lt = _loose(t)
         sm = difflib.SequenceMatcher(None, lt, lq, autojunk=False)
@@ -226,12 +255,20 @@ def _fuzzy_span(quote: str, texts: Sequence[str], max_chars: int) -> str | None:
             start -= 1
         while end < len(lt) and not lt[end].isspace():
             end += 1
-        span = t[start:end].strip()
-        if not span or len(span) > max_chars:
-            continue
-        ratio = difflib.SequenceMatcher(None, lq, _loose(span), autojunk=False).ratio()
-        if ratio >= FUZZY_MIN_RATIO and (best is None or ratio > best[0]):
-            best = (ratio, span)
+        lspan = lt[start:end].strip()
+        ratio = difflib.SequenceMatcher(None, lq, lspan, autojunk=False).ratio()
+        if ratio >= FUZZY_MIN_RATIO and _edges_agree(lq, lspan):
+            offer(ratio, t[start:end])
+        if m.size >= max(MIN_SEGMENT_CHARS, int(0.75 * len(lq))):
+            s, e = m.a, m.a + m.size
+            if _mid_word(lt, s) or _mid_word(lq, m.b):
+                while s < e and not lt[s].isspace():
+                    s += 1
+            if _mid_word(lt, e) or _mid_word(lq, m.b + m.size):
+                while e > s and not lt[e - 1].isspace():
+                    e -= 1
+            if e - s >= MIN_SEGMENT_CHARS:
+                offer(m.size / len(lq), t[s:e])
     return best[1] if best else None
 
 
@@ -325,10 +362,10 @@ def repair_quote(contract: Contract, quote: str, texts: Sequence[str], hint: str
         for p in parts:
             if _found(p, texts):
                 return p, "quote_segment"
-            hit = _find_loose(p, texts) or _fuzzy_span(p, texts, contract.max_quote_chars)
+            hit = _find_loose(p, texts) or _fuzzy_span(p, texts)
             if hit:
                 return hit, "quote_segment"
-    span = _fuzzy_span(trimmed, texts, contract.max_quote_chars)
+    span = _fuzzy_span(trimmed, texts)
     if span:
         return span, "quote_fuzzy"
     return None
@@ -361,7 +398,9 @@ def repair_example(contract: Contract, ex: Example) -> list[dict]:
     there is a real error, and the filter rejects it). Returns the repairs,
     each ``{"kind", "from", "to"}``, and stores them in
     ``ex.reference["repairs"]``. Anything that does not resolve is left for
-    ``check_example`` to reject under its usual reason.
+    ``check_example`` to reject under its usual reason. A citation line the
+    teacher indented under a bullet is moved to the start of the line
+    (``citation_dedented``), which is where the app's pattern wants it.
     """
     if not ex.answerable or not ex.target:
         return []
@@ -377,6 +416,11 @@ def repair_example(contract: Contract, ex: Example) -> list[dict]:
     for raw_line in ex.target.split("\n"):
         line = raw_line.rstrip()
         m = pattern.match(line) if line.lstrip().startswith(">") else None
+        if not m and line.lstrip().startswith(">") and line != line.lstrip():
+            m = pattern.match(line.lstrip())
+            if m:
+                repairs.append({"kind": "citation_dedented", "from": line, "to": line.lstrip()})
+                line = line.lstrip()
         if not m:
             out.append(raw_line)
             continue
@@ -399,7 +443,7 @@ def repair_example(contract: Contract, ex: Example) -> list[dict]:
             if short:
                 repairs.append({"kind": "quote_shortened", "from": new_quote, "to": short})
                 new_quote = short
-        if new_name != name or new_quote != quote:
+        if new_name != name or new_quote != quote or line != raw_line.rstrip():
             out.append(line[: m.start(1)] + new_name + line[m.end(1) : m.start(2)] + new_quote + line[m.end(2) :])
         else:
             out.append(raw_line)

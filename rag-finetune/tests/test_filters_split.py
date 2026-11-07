@@ -255,6 +255,44 @@ def test_gold_counts_as_cited_when_the_quote_runs_into_the_neighbor_chunk():
     assert check_example(CONTRACT, ex("single", elsewhere, sources=srcs, gold=gold)) == "gold_not_cited"
 
 
+def test_fuzzy_span_does_not_slide_onto_page_markers_or_chunk_edges():
+    # the chunk starts mid-word: the quoted sentence begins in the previous chunk
+    chunk = "u suspect that the heating system may be contaminated with mold (it is part of a bigger problem), consult the guide."
+    assert repair_quote(CONTRACT, "If you suspect that the heating system may be contaminated with mold", [chunk]) == \
+        ("suspect that the heating system may be contaminated with mold", "quote_fuzzy")
+    # a page footer sits inside the sentence the teacher quoted
+    page = "The molten rock -- 1 of 9 -- (magma) rises to the surface from as deep as tens of kilometers and erupts to form volcanoes."
+    assert repair_quote(CONTRACT, "molten rock (magma) rises to the surface from as deep as tens of kilometers and erupts to form volcanoes.", [page]) == \
+        ("(magma) rises to the surface from as deep as tens of kilometers and erupts to form volcanoes.", "quote_fuzzy")
+    # a real paraphrase still fails
+    assert repair_quote(CONTRACT, "magma comes up from very deep and makes volcanoes", [page]) is None
+
+
+def test_fuzzy_repair_over_the_length_limit_is_then_shortened():
+    doc = "nhlbi-dash-eating-plan-guide.pdf"
+    src = ("Menus and recipes were analyzed using the Minnesota Nutrition Data System software—Food Data Base version "
+           "NDS-R 2005— developed by the Nutrition Coordinating Center, University of Minnesota, Minneapolis.")
+    quote = src.replace("2005— developed", "2005—developed")  # one space short of verbatim, 206 chars
+    assert len(quote) > 200
+    srcs = [{"documentName": doc, "content": src, "normalized": src}]
+    e = ex("single", f"In Minneapolis.\n> **{doc}** — \"{quote}\"", sources=srcs,
+           gold=[{"document": doc, "index": 0, "normalized": src}], reference={"answer_span": "University of Minnesota, Minneapolis"})
+    r = repair_example(CONTRACT, e)
+    assert [x["kind"] for x in r] == ["quote_fuzzy", "quote_shortened"]
+    assert r[1]["to"].endswith("Minneapolis.") and len(r[1]["to"]) <= 200
+    assert check_example(CONTRACT, e) is None
+
+
+def test_indented_citation_line_is_dedented():
+    t = f"- The warranty lasts one year.\n  > **{DOC}** — covered by a one-year limited warranty"
+    e = ex("single", t)
+    assert check_example(CONTRACT, ex("single", t)) == "malformed_citation_line"
+    r = repair_example(CONTRACT, e)
+    assert [x["kind"] for x in r] == ["citation_dedented"]
+    assert e.target == f"- The warranty lasts one year.\n> **{DOC}** — covered by a one-year limited warranty"
+    assert check_example(CONTRACT, e) is None
+
+
 if __name__ == "__main__":
     tests = [v for k, v in sorted(globals().items()) if k.startswith("test_") and callable(v)]
     for test in tests:
