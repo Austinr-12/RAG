@@ -6,14 +6,24 @@ candidates points at a prompt problem. Both numbers belong in the dataset card.
 
 Order matters: the first failing check names the rejection, so cheap format
 checks run before grounding checks, and dedup runs last over the survivors.
+
+Repairs (``repair_example``) run before the checks. The teacher's citations
+are often one edit away from valid: a shortened document title, a quote with a
+trailing ellipsis, a lower-cased first word, curly quotation marks, a stray
+wrapping mark. Training on the near miss would teach the student the near
+miss, so each one is either rewritten to the exact source name and the exact
+source span, or left for the filter to reject. Every repair is counted by kind
+and stored on the example (``reference["repairs"]``) so the dataset card can
+report how much of the teacher's output needed touching.
 """
 
 from __future__ import annotations
 
+import difflib
 import re
 from collections import Counter
 from dataclasses import dataclass, field
-from typing import Iterable
+from typing import Iterable, Sequence
 
 from .contract import Contract, scan_citations, strip_wrapping_quotes
 from .teacher import Example, canonical_abstention
@@ -25,6 +35,14 @@ CHARS_PER_TOKEN = 3.2
 MAX_TOKENS = 3072
 MAX_CHARS = int(MAX_TOKENS * CHARS_PER_TOKEN)
 
+# Repair thresholds. A cited name shorter than MIN_NAME_CHARS is never
+# resolved by substring (too easy to hit the wrong document). An ellipsis
+# segment shorter than MIN_SEGMENT_CHARS is not worth keeping as the quote. A
+# fuzzy span must match the quote at FUZZY_MIN_RATIO (difflib ratio) or better.
+MIN_NAME_CHARS = 4
+MIN_SEGMENT_CHARS = 20
+FUZZY_MIN_RATIO = 0.9
+
 
 @dataclass
 class FilterStats:
@@ -32,14 +50,23 @@ class FilterStats:
     kept: int = 0
     rejected: Counter = field(default_factory=Counter)
     rejected_by_type: dict[str, Counter] = field(default_factory=dict)
+    repairs: Counter = field(default_factory=Counter)
+    repaired: int = 0
+    repaired_kept: int = 0
 
-    def record(self, ex: Example, reason: str | None) -> None:
+    def record(self, ex: Example, reason: str | None, repairs: Sequence[dict] = ()) -> None:
         self.total += 1
         if reason is None:
             self.kept += 1
         else:
             self.rejected[reason] += 1
             self.rejected_by_type.setdefault(ex.type, Counter())[reason] += 1
+        if repairs:
+            self.repaired += 1
+            if reason is None:
+                self.repaired_kept += 1
+            for r in repairs:
+                self.repairs[r["kind"]] += 1
 
     def to_dict(self) -> dict:
         return {
@@ -48,6 +75,11 @@ class FilterStats:
             "kept_rate": round(self.kept / self.total, 4) if self.total else None,
             "rejected": {k: {"count": v, "rate": round(v / self.total, 4)} for k, v in self.rejected.most_common()},
             "rejected_by_type": {t: dict(c.most_common()) for t, c in sorted(self.rejected_by_type.items())},
+            "repairs": {
+                "examples": self.repaired,
+                "examples_kept": self.repaired_kept,
+                "by_kind": dict(self.repairs.most_common()),
+            },
         }
 
 
@@ -111,6 +143,191 @@ def _golds_cited(contract: Contract, ex: Example, cites: list[dict]) -> bool:
             return False
     return True
 
+
+# -- repairs ------------------------------------------------------------------
+
+_ELLIPSIS_SPLIT_RE = re.compile(r"\s*(?:\.{3,}|…)\s*")
+_EDGE_ELLIPSIS_RE = re.compile(r"^(?:\.{3,}|…)\s*|\s*(?:\.{3,}|…)$")
+_TRAILING_PUNCT = ".,;:!?"
+_OPENING_MARKS = "\"'“‘«‹"
+_CLOSING_MARKS = "\"'”’»›"
+_LOOSE_MAP: dict[int, str] = {
+    **{ord(c): '"' for c in "“”«»„"},
+    **{ord(c): "'" for c in "‘’‚`´"},
+    **{ord(c): "-" for c in "‐‑‒–—―"},
+}
+
+
+def _loose(text: str) -> str:
+    """Lower-cased text with quotation marks and dashes unified. Exactly one
+    output character per input character, so an index into the loose text is
+    an index into the original and the exact-case span can be read back."""
+    out = []
+    for ch in text:
+        ch = _LOOSE_MAP.get(ord(ch), ch)
+        low = ch.lower()
+        out.append(low if len(low) == 1 else ch)
+    return "".join(out)
+
+
+def _found(quote: str, texts: Sequence[str]) -> bool:
+    return bool(quote) and any(quote in t for t in texts)
+
+
+def _find_loose(quote: str, texts: Sequence[str]) -> str | None:
+    """The exact-case span of a text that equals ``quote`` up to case,
+    quotation-mark style and dash style."""
+    lq = _loose(quote)
+    if not lq:
+        return None
+    for t in texts:
+        i = _loose(t).find(lq)
+        if i >= 0:
+            return t[i : i + len(lq)]
+    return None
+
+
+def _fuzzy_span(quote: str, texts: Sequence[str], max_chars: int) -> str | None:
+    """The source span the quote was almost certainly copied from: align on
+    the longest shared run, widen to word boundaries, accept only when the
+    span and the quote agree at FUZZY_MIN_RATIO or better."""
+    lq = _loose(quote)
+    if len(lq) < MIN_SEGMENT_CHARS:
+        return None
+    best: tuple[float, str] | None = None
+    for t in texts:
+        lt = _loose(t)
+        sm = difflib.SequenceMatcher(None, lt, lq, autojunk=False)
+        m = sm.find_longest_match(0, len(lt), 0, len(lq))
+        if m.size < max(12, len(lq) // 4):
+            continue
+        start = max(0, m.a - m.b)
+        end = min(len(lt), start + len(lq))
+        while start > 0 and not lt[start - 1].isspace():
+            start -= 1
+        while end < len(lt) and not lt[end].isspace():
+            end += 1
+        span = t[start:end].strip()
+        if not span or len(span) > max_chars:
+            continue
+        ratio = difflib.SequenceMatcher(None, lq, _loose(span), autojunk=False).ratio()
+        if ratio >= FUZZY_MIN_RATIO and (best is None or ratio > best[0]):
+            best = (ratio, span)
+    return best[1] if best else None
+
+
+def resolve_document_name(cited: str, names: Sequence[str]) -> tuple[str | None, str | None]:
+    """Map a cited document name onto one of the provided source names.
+
+    Returns ``(name, kind)``: ``kind`` is None for an exact match,
+    ``"document_name_case"`` when only letter case differed, or
+    ``"document_name_partial"`` when the cited name is a unique
+    case-insensitive substring of one source name (the teacher dropped an
+    author, an extension or a part label) or uniquely contains one source
+    name. ``(None, None)`` when nothing resolves unambiguously.
+    """
+    if cited in names:
+        return cited, None
+    c = _flatten(cited).casefold()
+    if len(c) < MIN_NAME_CHARS:
+        return None, None
+    folded = [(n, _flatten(n).casefold()) for n in names]
+    same = [n for n, f in folded if f == c]
+    if len(same) == 1:
+        return same[0], "document_name_case"
+    inside = [n for n, f in folded if c in f]
+    if len(inside) == 1:
+        return inside[0], "document_name_partial"
+    around = [n for n, f in folded if len(f) >= MIN_NAME_CHARS and f in c]
+    if len(around) == 1:
+        return around[0], "document_name_partial"
+    return None, None
+
+
+def repair_quote(contract: Contract, quote: str, texts: Sequence[str]) -> tuple[str, str] | None:
+    """Turn a near-miss quote into the exact span of one of ``texts``
+    (flattened source texts of the cited document).
+
+    Returns ``(exact_quote, kind)`` or None when the quote is already verbatim
+    or cannot be repaired. Kinds, in the order tried: ``quote_unwrapped``
+    (wrapping or stray quotation marks), ``quote_trimmed`` (edge ellipsis or
+    trailing punctuation), ``quote_normalized`` (case, quotation-mark or dash
+    style), ``quote_segment`` (the longest verbatim part of a quote stitched
+    with ellipses), ``quote_fuzzy`` (a small edit; the aligned source span).
+    """
+    original = _flatten(quote)
+    if _found(original, texts):
+        return None
+    unwrapped = _flatten(strip_wrapping_quotes(contract, quote))
+    edge = unwrapped.lstrip(_OPENING_MARKS).rstrip(_CLOSING_MARKS).strip()
+    trimmed = _EDGE_ELLIPSIS_RE.sub("", edge).rstrip(_TRAILING_PUNCT).strip()
+    for cand, kind in ((unwrapped, "quote_unwrapped"), (edge, "quote_unwrapped"), (trimmed, "quote_trimmed")):
+        if cand and cand != original and _found(cand, texts):
+            return cand, kind
+    loose = _find_loose(trimmed, texts)
+    if loose:
+        return loose, "quote_normalized"
+    parts = [p.strip(_OPENING_MARKS + _CLOSING_MARKS + " " + _TRAILING_PUNCT) for p in _ELLIPSIS_SPLIT_RE.split(edge)]
+    parts = sorted((p for p in parts if p), key=len, reverse=True)
+    if len(parts) > 1:
+        for p in parts:
+            if len(p) < MIN_SEGMENT_CHARS:
+                break
+            if _found(p, texts):
+                return p, "quote_segment"
+            hit = _find_loose(p, texts)
+            if hit:
+                return hit, "quote_segment"
+    span = _fuzzy_span(trimmed, texts, contract.max_quote_chars)
+    if span:
+        return span, "quote_fuzzy"
+    return None
+
+
+def repair_example(contract: Contract, ex: Example) -> list[dict]:
+    """Rewrite near-miss citation lines in ``ex.target`` to the exact source
+    name and the exact source span. Abstentions are left alone (a citation
+    there is a real error, and the filter rejects it). Returns the repairs,
+    each ``{"kind", "from", "to"}``, and stores them in
+    ``ex.reference["repairs"]``. Anything that does not resolve is left for
+    ``check_example`` to reject under its usual reason.
+    """
+    if not ex.answerable or not ex.target:
+        return []
+    pattern = contract.citation_pattern
+    names = list(dict.fromkeys(s["documentName"] for s in ex.sources))
+    repairs: list[dict] = []
+    out: list[str] = []
+    for raw_line in ex.target.split("\n"):
+        line = raw_line.rstrip()
+        m = pattern.match(line) if line.lstrip().startswith(">") else None
+        if not m:
+            out.append(raw_line)
+            continue
+        name, quote = m.group(1), m.group(2)
+        new_name, kind = resolve_document_name(name, names)
+        if new_name is None:
+            out.append(raw_line)
+            continue
+        if kind:
+            repairs.append({"kind": kind, "from": name, "to": new_name})
+        texts = [_flatten(s.get("normalized") or s["content"]) for s in ex.sources if s["documentName"] == new_name]
+        new_quote = quote
+        fixed = repair_quote(contract, quote, texts)
+        if fixed:
+            new_quote, qkind = fixed
+            repairs.append({"kind": qkind, "from": quote, "to": new_quote})
+        if new_name != name or new_quote != quote:
+            out.append(line[: m.start(1)] + new_name + line[m.end(1) : m.start(2)] + new_quote + line[m.end(2) :])
+        else:
+            out.append(raw_line)
+    if repairs:
+        ex.target = "\n".join(out)
+        ex.reference.setdefault("repairs", []).extend(repairs)
+    return repairs
+
+
+# -- dedup --------------------------------------------------------------------
 
 _WORD_RE = re.compile(r"[a-z0-9]+")
 

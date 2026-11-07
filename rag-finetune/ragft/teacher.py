@@ -12,7 +12,8 @@ Two kinds of calls:
 
 Every call is cached on disk by a hash of its request, so re-running the
 builder after a crash, a filter change or a bug costs nothing. The cache file
-is ``data/generated/teacher-cache.jsonl`` (gitignored).
+is ``data/generated/teacher-cache.jsonl`` (gitignored). The cache is shared by
+the builder's worker threads, so its reads, writes and counters take a lock.
 """
 
 from __future__ import annotations
@@ -20,6 +21,7 @@ from __future__ import annotations
 import hashlib
 import json
 import re
+import threading
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Mapping, Sequence
@@ -75,6 +77,7 @@ class ResponseCache:
     def __init__(self, path: Path = DEFAULT_CACHE):
         self.path = path
         self._mem: dict[str, str] = {}
+        self._lock = threading.Lock()
         if path.exists():
             with path.open(encoding="utf-8") as fh:
                 for line in fh:
@@ -90,17 +93,19 @@ class ResponseCache:
         return hashlib.sha256(payload.encode("utf-8")).hexdigest()
 
     def get(self, key: str) -> str | None:
-        text = self._mem.get(key)
-        if text is not None:
-            self.hits += 1
+        with self._lock:
+            text = self._mem.get(key)
+            if text is not None:
+                self.hits += 1
         return text
 
     def put(self, key: str, text: str) -> None:
-        self.misses += 1
-        self._mem[key] = text
-        self.path.parent.mkdir(parents=True, exist_ok=True)
-        with self.path.open("a", encoding="utf-8") as fh:
-            fh.write(json.dumps({"key": key, "text": text}, ensure_ascii=False) + "\n")
+        with self._lock:
+            self.misses += 1
+            self._mem[key] = text
+            self.path.parent.mkdir(parents=True, exist_ok=True)
+            with self.path.open("a", encoding="utf-8") as fh:
+                fh.write(json.dumps({"key": key, "text": text}, ensure_ascii=False) + "\n")
 
 
 QUESTION_SYSTEM = """You write questions for testing a document question-answering assistant.
@@ -112,9 +117,18 @@ Given one passage from a user's document, write {n} questions that:
 For each question give answer_span: the shortest EXACT substring of the passage (copy it character for character, at most 200 characters) that answers it.
 Return JSON: {{"questions": [{{"question": "...", "answer_span": "..."}}]}}"""
 
+# Why two factual parts and not a relationship: the first dry run asked for
+# questions that "require both passages" and got "how does X relate to Y"
+# essays, which the production prompt rightly refused to answer from two
+# unrelated chunks. A question with one concrete fact per passage is
+# answerable, and it still forces the student to cite both documents.
 TWO_PASSAGE_SYSTEM = """You write questions for testing a document question-answering assistant.
-Given two passages from a user's documents, write {n} questions that each REQUIRE information from BOTH passages (for example a comparison, a combination of two conditions, or a value from each). Each question must sound like a real person who has not read the passages.
-For each question give answer_span_a (exact substring of passage A, at most 200 characters) and answer_span_b (exact substring of passage B, at most 200 characters) that together answer it.
+Given two passages from a user's documents, write {n} questions. Each question has TWO factual parts joined into one natural sentence: the first part is answered by a specific fact stated in passage A, the second by a specific fact stated in passage B (a number, name, date, condition, procedure step, definition or rule). Example shape: "What is the deadline for X, and which form covers Y?"
+Rules:
+- do not ask how the passages relate, compare or differ; just ask for the two facts;
+- each part must be answerable from its passage alone and not from general knowledge;
+- sound like a real person who has NOT read the passages and does not know their wording (never say "the passage" or "the text").
+For each question give answer_span_a: the shortest EXACT substring of passage A (copied character for character, at most 200 characters) that answers the first part, and answer_span_b: the same for passage B and the second part.
 Return JSON: {{"questions": [{{"question": "...", "answer_span_a": "...", "answer_span_b": "..."}}]}}"""
 
 UNANSWERABLE_SYSTEM = """You check whether a question can be answered from given sources.

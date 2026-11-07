@@ -11,7 +11,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from ragft.contract import load_contract  # noqa: E402
-from ragft.filters import check_example, dedupe  # noqa: E402
+from ragft.filters import FilterStats, check_example, dedupe, repair_example, repair_quote, resolve_document_name  # noqa: E402
 from ragft.split import split_by_library  # noqa: E402
 from ragft.teacher import Example, canonical_abstention  # noqa: E402
 
@@ -85,6 +85,87 @@ def test_too_long_rejected():
     t = f"Long.\n> **{DOC}** — x x x"
     assert check_example(CONTRACT, ex("single", t, sources=long_sources, gold=[{"document": DOC, "index": 0, "normalized": "x " * 6000}])) == "too_long"
 
+
+# -- repairs ------------------------------------------------------------------
+
+def test_repair_leaves_valid_and_abstention_targets_alone():
+    t = f"The warranty lasts one year.\n> **{DOC}** — covered by a one-year limited warranty"
+    e = ex("single", t)
+    assert repair_example(CONTRACT, e) == [] and e.target == t and "repairs" not in e.reference
+    bad = canonical_abstention(CONTRACT) + f"\n> **{DOC}** — covered by a one-year limited warranty..."
+    n = ex("negative", bad)
+    assert repair_example(CONTRACT, n) == [] and n.target == bad
+    assert check_example(CONTRACT, n) == "abstention_has_citation"
+
+
+def test_repair_document_name_partial_and_case():
+    e = ex("single", "One year.\n> **aurora-notebook-handbook** — covered by a one-year limited warranty")
+    r = repair_example(CONTRACT, e)
+    assert [x["kind"] for x in r] == ["document_name_partial"] and r[0]["to"] == DOC
+    assert e.target == f"One year.\n> **{DOC}** — covered by a one-year limited warranty"
+    assert e.reference["repairs"] == r
+    assert check_example(CONTRACT, e) is None
+    e2 = ex("single", "One year.\n> **Aurora-Notebook-Handbook.MD** — covered by a one-year limited warranty")
+    assert [x["kind"] for x in repair_example(CONTRACT, e2)] == ["document_name_case"]
+    assert check_example(CONTRACT, e2) is None
+    assert resolve_document_name("Aurora Notebook Handbook (aurora-notebook-handbook.md)", [DOC]) == (DOC, "document_name_partial")
+
+
+def test_repair_document_name_refuses_ambiguity_and_strangers():
+    srcs = [{"documentName": "a-guide.md", "content": TEXT, "normalized": TEXT},
+            {"documentName": "b-guide.md", "content": TEXT, "normalized": TEXT}]
+    e = ex("single", "One year.\n> **guide** — covered by a one-year limited warranty", sources=srcs,
+           gold=[{"document": "a-guide.md", "index": 0, "normalized": TEXT}])
+    assert repair_example(CONTRACT, e) == []
+    assert check_example(CONTRACT, e) == "unknown_document_name"
+    assert resolve_document_name("Aurora Handbook", [DOC, "faq.txt"]) == (None, None)
+    assert resolve_document_name("md", [DOC]) == (None, None)  # too short to trust
+
+
+def test_repair_quote_unwrapped_trimmed_normalized():
+    texts = [TEXT]
+    assert repair_quote(CONTRACT, "covered by a one-year limited warranty", texts) is None
+    assert repair_quote(CONTRACT, "covered by a one-year limited warranty...", texts) == ("covered by a one-year limited warranty", "quote_trimmed")
+    assert repair_quote(CONTRACT, "…covered by a one-year limited warranty.", texts) == ("covered by a one-year limited warranty", "quote_trimmed")
+    assert repair_quote(CONTRACT, "“covered by a one-year limited warranty”", texts) == ("covered by a one-year limited warranty", "quote_unwrapped")
+    assert repair_quote(CONTRACT, "\"covered by a one-year limited warranty”", texts) == ("covered by a one-year limited warranty", "quote_unwrapped")
+    assert repair_quote(CONTRACT, "every Aurora Notebook is covered", texts) == ("Every Aurora Notebook is covered", "quote_normalized")
+    assert repair_quote(CONTRACT, "one–year limited warranty", ["a one-year limited warranty"]) == ("one-year limited warranty", "quote_normalized")
+
+
+def test_repair_quote_segment_and_fuzzy():
+    texts = [TEXT]
+    assert repair_quote(CONTRACT, "Every Aurora Notebook... from the date of purchase.", texts) == ("from the date of purchase", "quote_segment")
+    assert repair_quote(CONTRACT, "covered by a one year limited warranty from the date of purchase", texts) == \
+        ("covered by a one-year limited warranty from the date of purchase.", "quote_fuzzy")
+    assert repair_quote(CONTRACT, "a 12 month warranty applies", texts) is None
+    assert repair_quote(CONTRACT, "Every Aurora... purchase", texts) is None  # segments too short to keep
+
+
+def test_repaired_example_passes_and_is_counted():
+    t = "One year.\n> **aurora-notebook-handbook** — “covered by a one-year limited warranty...”"
+    e = ex("single", t)
+    r = repair_example(CONTRACT, e)
+    assert [x["kind"] for x in r] == ["document_name_partial", "quote_trimmed"]
+    assert e.target == f"One year.\n> **{DOC}** — covered by a one-year limited warranty"
+    reason = check_example(CONTRACT, e)
+    assert reason is None
+    stats = FilterStats()
+    stats.record(e, reason, r)
+    stats.record(ex("single", "no citation here"), "no_citation")
+    d = stats.to_dict()
+    assert d["repairs"] == {"examples": 1, "examples_kept": 1, "by_kind": {"document_name_partial": 1, "quote_trimmed": 1}}
+    assert d["kept"] == 1 and d["rejected"]["no_citation"]["count"] == 1
+
+
+def test_repair_keeps_unrepairable_lines_for_the_filter():
+    t = f"One year.\n> **{DOC}** — a 12 month warranty applies\n> **Nowhere.pdf** — covered by a one-year limited warranty"
+    e = ex("single", t)
+    assert repair_example(CONTRACT, e) == [] and e.target == t
+    assert check_example(CONTRACT, e) == "quote_not_verbatim"
+
+
+# -- dedup and split ------------------------------------------------------------
 
 def test_dedupe_drops_near_duplicates_within_document():
     a = ex("single", "t"); a.question = "How long is the warranty period?"

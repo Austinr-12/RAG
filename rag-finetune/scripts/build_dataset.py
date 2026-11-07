@@ -1,29 +1,41 @@
 """Build the grounded-answer dataset: sample, generate with the teacher,
-filter, split, and write stats.
+repair, filter, split, and write stats.
 
-    python scripts/build_dataset.py --limit 40 --dry-run      # read 40 candidates, spend cents
-    python scripts/build_dataset.py --target 3000              # the real build (cached, resumable)
-    python scripts/build_dataset.py --target 3000 --types single,negative
+    python scripts/build_dataset.py --limit 100 --dry-run     # read 100 candidates, spend cents
+    python scripts/build_dataset.py --target 3000             # the real build (cached, resumable)
+    python scripts/build_dataset.py --target 3000 --types single,negative --workers 6
 
 Outputs (data/generated/, gitignored unless noted):
-  candidates.jsonl   every generated example with its filter verdict
+  candidates.jsonl   every generated example with its filter verdict and repairs
   dataset.jsonl      the kept examples
   train/validation/test.jsonl   split by library
-  results/phase1/dataset-stats.json   (tracked) counts, rejection rates, mix
+  results/phase1/dataset-stats.json   (tracked) counts, rejection rates, repairs, mix
+A dry run writes dryrun-candidates.jsonl, dryrun-review.md (one section per
+candidate, for reading by hand) and dryrun-stats.json instead, all under
+data/generated/.
 
 Mix (PLAN.md Phase 1): single 60%, two_gold 10%, negative 18%, partial 5%,
 multi-turn 7%. Candidates are oversampled (--oversample, default 1.5) so the
 kept set lands near --target after filtering.
+
+Concurrency: candidates are built by a thread pool (--workers, default 5).
+Each job derives its own random generator from the run seed and its gold
+chunk, so the output does not depend on scheduling, and the teacher cache
+makes re-runs free. Repairs (ragft.filters.repair_example) run before the
+filter chain in the main thread.
 """
 
 from __future__ import annotations
 
 import argparse
 import json
+import math
 import random
 import sys
+import threading
 import time
 from collections import Counter, defaultdict
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
@@ -33,7 +45,7 @@ from dotenv import load_dotenv  # noqa: E402
 from ragft.client import ChatClient, Endpoint  # noqa: E402
 from ragft.contract import load_contract  # noqa: E402
 from ragft.corpus import Chunk, Corpus  # noqa: E402
-from ragft.filters import FilterStats, check_example, dedupe  # noqa: E402
+from ragft.filters import FilterStats, check_example, dedupe, repair_example  # noqa: E402
 from ragft.retrieval_sim import (  # noqa: E402
     LibraryIndex,
     answerable_context,
@@ -49,6 +61,8 @@ ROOT = Path(__file__).resolve().parents[1]
 OUT = ROOT / "data" / "generated"
 STATS = ROOT / "results" / "phase1" / "dataset-stats.json"
 MIX = {"single": 0.60, "two_gold": 0.10, "negative": 0.18, "partial": 0.05, "multiturn": 0.07}
+# Expected candidates per gold chunk, used to size each batch of jobs.
+YIELD = {"single": 2, "two_gold": 1, "negative": 1, "partial": 1}
 MAX_PER_DOCUMENT = 40
 MIN_GOLD_CHARS = 350
 MIN_ALPHA_RATIO = 0.6
@@ -99,19 +113,32 @@ def gold_ref(c: Chunk) -> dict:
 
 
 class Builder:
-    def __init__(self, corpus: Corpus, teacher: Teacher, contract, rng: random.Random, top_k: int):
-        self.corpus, self.teacher, self.contract, self.rng, self.top_k = corpus, teacher, contract, rng, top_k
+    """Makes candidates of each type from a gold chunk. Methods are called from
+    worker threads: they share the teacher (cached, locked) and the indexes
+    (read only), and touch nothing else of the builder except ``_reject``."""
+
+    def __init__(self, corpus: Corpus, teacher: Teacher, contract, seed: int, top_k: int):
+        self.corpus, self.teacher, self.contract, self.seed, self.top_k = corpus, teacher, contract, seed, top_k
         self.indexes = {lib: LibraryIndex.build(corpus, lib) for lib in corpus.libraries}
-        self.counter = Counter()
         self.side_rejects: Counter = Counter()
+        self._lock = threading.Lock()
 
-    def _id(self, kind: str, c: Chunk) -> str:
-        self.counter[kind] += 1
-        return f"{kind}-{c.library}-{c.document[:24]}-{c.index}-{self.counter[kind]}"
+    def _reject(self, reason: str) -> None:
+        with self._lock:
+            self.side_rejects[reason] += 1
 
-    def _new(self, kind: str, c: Chunk, question: str, sources, gold, reference, history=()) -> Example:
+    def _rng(self, kind: str, c: Chunk, salt: str = "") -> random.Random:
+        """One generator per job, seeded from the run seed and the chunk, so a
+        job's choices do not depend on which thread ran it or when."""
+        return random.Random(f"{self.seed}|{kind}|{c.document}|{c.index}|{salt}")
+
+    @staticmethod
+    def _id(kind: str, c: Chunk, seq: int) -> str:
+        return f"{kind}-{c.library}-{c.document[:24]}-{c.index}-{seq}"
+
+    def _new(self, kind: str, c: Chunk, seq: int, question: str, sources, gold, reference, history=()) -> Example:
         return Example(
-            id=self._id(kind, c), type=kind, library=c.library, name_style=reference.get("name_style", "filename"),
+            id=self._id(kind, c, seq), type=kind, library=c.library, name_style=reference.get("name_style", "filename"),
             question=question, sources=list(sources), history=list(history), gold=gold, reference=reference,
             teacher_model=self.teacher.model, contract_sha256=self.contract.sha256,
         )
@@ -122,79 +149,83 @@ class Builder:
             if _flatten(q["answer_span"]) in c.normalized and len(_flatten(q["answer_span"])) <= self.contract.max_quote_chars:
                 qs.append(q)
             else:
-                self.side_rejects["question_span_not_in_passage"] += 1
+                self._reject("question_span_not_in_passage")
         return qs
 
     # -- example types ---------------------------------------------------------
     def single(self, c: Chunk) -> list[Example]:
+        rng = self._rng("single", c)
         out = []
-        for q in self._questions_for(c, n=2):
-            style = choose_name_style(self.rng)
-            k = choose_k(self.rng, self.top_k)
-            ctx = answerable_context(self.corpus, self.indexes[c.library], q["question"], [c], k, self.rng)
+        for i, q in enumerate(self._questions_for(c, n=2)):
+            style = choose_name_style(rng)
+            k = choose_k(rng, self.top_k)
+            ctx = answerable_context(self.corpus, self.indexes[c.library], q["question"], [c], k, rng)
             sources = render_sources(self.corpus, ctx, style)
-            ex = self._new("single", c, q["question"], sources, [gold_ref(c)], {"answer_span": q["answer_span"], "name_style": style, "k": k})
+            ex = self._new("single", c, i, q["question"], sources, [gold_ref(c)], {"answer_span": q["answer_span"], "name_style": style, "k": k})
             ex.target = self.teacher.answer(ex.question, ex.sources)
             out.append(ex)
         return out
 
     def two_gold(self, c: Chunk) -> list[Example]:
+        rng = self._rng("two_gold", c)
         lib = self.corpus.libraries[c.library]
         others = [x for d in lib for x in d.chunks if x.document != c.document and gold_worthy(x)] or \
                  [x for x in self.corpus.document_of(c).chunks if abs(x.index - c.index) > 1 and gold_worthy(x)]
         if not others:
             return []
-        b = self.rng.choice(others)
+        b = rng.choice(others)
         out = []
-        for q in self.teacher.two_passage_questions(c.normalized, b.normalized, n=1):
+        for i, q in enumerate(self.teacher.two_passage_questions(c.normalized, b.normalized, n=1)):
             if _flatten(q["answer_span_a"]) not in c.normalized or _flatten(q["answer_span_b"]) not in b.normalized:
-                self.side_rejects["two_gold_span_not_in_passage"] += 1
+                self._reject("two_gold_span_not_in_passage")
                 continue
-            style = choose_name_style(self.rng)
-            ctx = answerable_context(self.corpus, self.indexes[c.library], q["question"], [c, b], self.top_k, self.rng)
+            style = choose_name_style(rng)
+            ctx = answerable_context(self.corpus, self.indexes[c.library], q["question"], [c, b], self.top_k, rng)
             sources = render_sources(self.corpus, ctx, style)
-            ex = self._new("two_gold", c, q["question"], sources, [gold_ref(c), gold_ref(b)],
+            ex = self._new("two_gold", c, i, q["question"], sources, [gold_ref(c), gold_ref(b)],
                            {"answer_span_a": q["answer_span_a"], "answer_span_b": q["answer_span_b"], "name_style": style, "k": self.top_k})
             ex.target = self.teacher.answer(ex.question, ex.sources)
             out.append(ex)
         return out
 
     def negative(self, c: Chunk) -> list[Example]:
+        rng = self._rng("negative", c)
         out = []
-        for q in self._questions_for(c, n=1):
-            style = choose_name_style(self.rng)
-            k = choose_k(self.rng, self.top_k)
+        for i, q in enumerate(self._questions_for(c, n=1)):
+            style = choose_name_style(rng)
+            k = choose_k(rng, self.top_k)
             ctx = negative_context(self.corpus, self.indexes[c.library], q["question"], c, k)
             if not ctx:
                 continue
             sources = render_sources(self.corpus, ctx, style)
             if self.teacher.is_answerable(q["question"], sources):
-                self.side_rejects["negative_still_answerable"] += 1
+                self._reject("negative_still_answerable")
                 continue
             desc = self.teacher.describe_sources(sources)
             target = canonical_abstention(self.contract) + (f" {desc}" if desc else "")
-            ex = self._new("negative", c, q["question"], sources, [gold_ref(c)],
+            ex = self._new("negative", c, i, q["question"], sources, [gold_ref(c)],
                            {"answer_span": q["answer_span"], "name_style": style, "k": k, "teacher_reply_discarded": True})
             ex.target = target
             out.append(ex)
         return out
 
     def partial(self, c: Chunk) -> list[Example]:
+        rng = self._rng("partial", c)
         qs = self._questions_for(c, n=1)
         doc = self.corpus.document_of(c)
         far = [x for x in doc.chunks if abs(x.index - c.index) > 2 and gold_worthy(x)]
         if not qs or not far:
             return []
-        other = self.rng.choice(far)
+        other = rng.choice(far)
         oq = self._questions_for(other, n=1)
         if not oq:
             return []
         question = f"{qs[0]['question']} Also, {oq[0]['question'][0].lower() + oq[0]['question'][1:]}"
-        style = choose_name_style(self.rng)
-        ctx = answerable_context(self.corpus, self.indexes[c.library], qs[0]["question"], [c], self.top_k, self.rng)
+        style = choose_name_style(rng)
+        ctx = answerable_context(self.corpus, self.indexes[c.library], qs[0]["question"], [c], self.top_k, rng)
         ctx = [x for x in ctx if abs(x.index - other.index) > 1 or x.document != other.document] or ctx
         sources = render_sources(self.corpus, ctx, style)
-        ex = self._new("partial", c, question, sources, [gold_ref(c)],
+        ex = self._new("partial", c, 0, question, sources, [gold_ref(c)],
                        {"answer_span": qs[0]["answer_span"], "uncovered_question": oq[0]["question"], "name_style": style, "k": len(ctx)})
         ex.target = self.teacher.answer(ex.question, ex.sources)
         ex.reference.update(self.teacher.partial_check(ex.question, ex.target))
@@ -203,31 +234,70 @@ class Builder:
     def multiturn(self, first: Example, c: Chunk) -> list[Example]:
         """A follow-up after a kept single example from the same library:
         answerable (new gold), uncovered (hard negative), or empty sources."""
+        rng = self._rng("multiturn", c, salt=first.id)
         out = []
         history = [{"role": "user", "content": first.question}, {"role": "assistant", "content": first.target or ""}]
         qs = self._questions_for(c, n=1)
         if not qs:
             return out
         q = qs[0]["question"]
-        variant = self.rng.choice(["answerable", "answerable", "uncovered", "empty"])
+        variant = rng.choice(["answerable", "answerable", "uncovered", "empty"])
         if variant == "answerable":
-            ctx = answerable_context(self.corpus, self.indexes[c.library], q, [c], self.top_k, self.rng)
+            ctx = answerable_context(self.corpus, self.indexes[c.library], q, [c], self.top_k, rng)
             sources = render_sources(self.corpus, ctx, first.name_style)
-            ex = self._new("multiturn_answerable", c, q, sources, [gold_ref(c)], {"answer_span": qs[0]["answer_span"], "name_style": first.name_style, "k": self.top_k}, history)
+            ex = self._new("multiturn_answerable", c, 0, q, sources, [gold_ref(c)], {"answer_span": qs[0]["answer_span"], "name_style": first.name_style, "k": self.top_k}, history)
             ex.target = self.teacher.answer(q, sources, history)
         elif variant == "uncovered":
             ctx = negative_context(self.corpus, self.indexes[c.library], q, c, self.top_k)
             sources = render_sources(self.corpus, ctx, first.name_style)
             if self.teacher.is_answerable(q, sources):
-                self.side_rejects["negative_still_answerable"] += 1
+                self._reject("negative_still_answerable")
                 return out
-            ex = self._new("multiturn_uncovered", c, q, sources, [gold_ref(c)], {"name_style": first.name_style, "k": self.top_k}, history)
+            ex = self._new("multiturn_uncovered", c, 0, q, sources, [gold_ref(c)], {"name_style": first.name_style, "k": self.top_k}, history)
             ex.target = canonical_abstention(self.contract)
         else:
-            ex = self._new("multiturn_empty", c, q, [], [gold_ref(c)], {"name_style": first.name_style, "k": 0}, history)
+            ex = self._new("multiturn_empty", c, 0, q, [], [gold_ref(c)], {"name_style": first.name_style, "k": 0}, history)
             ex.target = self.contract.no_sources_reply
         out.append(ex)
         return out
+
+
+def write_jsonl(path: Path, examples: list[Example]) -> None:
+    with path.open("w", encoding="utf-8") as fh:
+        for ex in examples:
+            fh.write(json.dumps(ex.to_json(), ensure_ascii=False) + "\n")
+
+
+def write_review(candidates: list[Example], path: Path) -> None:
+    """One section per candidate for reading by hand: question, source names,
+    gold span, repairs, verdict and the full target."""
+    lines = [
+        f"# Dry-run review: {len(candidates)} candidates",
+        "",
+        "For each one: is the question natural, is the answer right for the gold span, "
+        "is the cited name exact, is the verdict fair, did a repair change the meaning?",
+        "",
+    ]
+    for i, ex in enumerate(candidates, 1):
+        lines += [f"## {i}. [{ex.type}] {ex.filter} | {ex.library} | names={ex.name_style} k={len(ex.sources)}", ""]
+        for m in ex.history:
+            lines.append(f"- history {m['role']}: {m['content'][:200]}")
+        if ex.history:
+            lines.append("")
+        lines += [f"**Q:** {ex.question}", ""]
+        names = list(dict.fromkeys(s["documentName"] for s in ex.sources))
+        lines += ["**Sources:** " + ("; ".join(names) if names else "(none)"), ""]
+        spans = [str(ex.reference[k]) for k in ("answer_span", "answer_span_a", "answer_span_b") if ex.reference.get(k)]
+        if spans:
+            lines += ["**Gold span(s):** " + " | ".join(spans), ""]
+        if ex.reference.get("uncovered_question"):
+            lines += [f"**Uncovered part:** {ex.reference['uncovered_question']}", ""]
+        for r in ex.reference.get("repairs", []):
+            lines.append(f"- repair `{r['kind']}`: `{r['from']}` -> `{r['to']}`")
+        if ex.reference.get("repairs"):
+            lines.append("")
+        lines += ["**A:**", "", "```text", *(ex.target or "").split("\n"), "```", ""]
+    path.write_text("\n".join(lines), encoding="utf-8")
 
 
 def main() -> int:
@@ -238,7 +308,8 @@ def main() -> int:
     ap.add_argument("--types", default=",".join(MIX), help="comma list of types to build")
     ap.add_argument("--seed", type=int, default=20261023)
     ap.add_argument("--teacher", default="gpt-4o-mini")
-    ap.add_argument("--dry-run", action="store_true", help="print examples, write nothing but the cache")
+    ap.add_argument("--workers", type=int, default=5, help="concurrent teacher jobs")
+    ap.add_argument("--dry-run", action="store_true", help="write the review files under data/generated/ instead of the dataset")
     args = ap.parse_args()
 
     load_dotenv(ROOT / ".env")
@@ -248,14 +319,15 @@ def main() -> int:
     client = ChatClient(Endpoint.openai(args.teacher), contract)
     cache = ResponseCache()
     teacher = Teacher(client, contract, cache)
-    builder = Builder(corpus, teacher, contract, rng, contract.top_k)
+    builder = Builder(corpus, teacher, contract, args.seed, contract.top_k)
     types = [t for t in args.types.split(",") if t]
+    workers = max(1, args.workers)
 
     n_cand = int(args.target * args.oversample)
     if args.limit:
         n_cand = min(n_cand, args.limit)
     quota = {t: max(1, round(n_cand * MIX[t])) for t in types}
-    print(f"corpus: {corpus.summary()['documents']} docs, {corpus.summary()['chunks']} chunks | candidates planned: {quota}")
+    print(f"corpus: {corpus.summary()['documents']} docs, {corpus.summary()['chunks']} chunks | candidates planned: {quota} | workers: {workers}")
 
     golds = sample_gold_chunks(corpus, sum(quota.values()) + 50, rng)
     stats = FilterStats()
@@ -264,17 +336,12 @@ def main() -> int:
     started = time.perf_counter()
     gi = 0
 
-    def take() -> Chunk:
-        nonlocal gi
-        c = golds[gi % len(golds)]
-        gi += 1
-        return c
-
     def run(exs: list[Example]) -> None:
         for ex in exs:
+            repairs = repair_example(contract, ex)
             reason = check_example(contract, ex)
             ex.filter = reason or "ok"
-            stats.record(ex, reason)
+            stats.record(ex, reason, repairs)
             candidates.append(ex)
             if reason is None:
                 kept.append(ex)
@@ -282,30 +349,60 @@ def main() -> int:
                 print("=" * 78)
                 print(f"[{ex.type}] {ex.filter} | {ex.library} | names={ex.name_style} k={len(ex.sources)}")
                 print("Q:", ex.question)
+                for r in repairs:
+                    print(f"repair {r['kind']}: {r['from'][:80]!r} -> {r['to'][:80]!r}")
                 print("A:", (ex.target or "")[:700])
 
-    for t in ("single", "two_gold", "negative", "partial"):
-        made = 0
-        while t in quota and made < quota[t] and gi < len(golds) * 3:
-            exs = getattr(builder, t)(take())
-            run(exs)
-            made += len(exs)
-            if made and made % 50 == 0:
-                print(f"  {t}: {made}/{quota[t]} candidates, kept so far {stats.kept}, {time.perf_counter() - started:.0f}s, cache hits {cache.hits} misses {cache.misses}")
-    if "multiturn" in quota:
-        singles = [ex for ex in kept if ex.type == "single"]
-        rng.shuffle(singles)
-        made = 0
-        for first in singles:
-            if made >= quota["multiturn"]:
-                break
-            lib_chunks = [c for c in golds if c.library == first.library and c.document != first.gold[0]["document"]] or \
-                         [c for c in golds if c.library == first.library]
-            if not lib_chunks:
+    def safe(fn):
+        """One failed candidate (network, a malformed reply) must not end a
+        long build; it is counted and the build goes on."""
+        def wrapped(*a):
+            try:
+                return fn(*a)
+            except Exception as e:  # noqa: BLE001
+                builder._reject("job_error")
+                print(f"  job failed: {type(e).__name__}: {str(e)[:200]}", file=sys.stderr, flush=True)
+                return []
+        return wrapped
+
+    def progress(t: str, made: int, want: int) -> None:
+        print(f"  {t}: {made}/{want} candidates, kept {stats.kept}, repaired {stats.repaired}, "
+              f"{time.perf_counter() - started:.0f}s, cache hits {cache.hits} misses {cache.misses}", flush=True)
+
+    with ThreadPoolExecutor(max_workers=workers) as pool:
+        for t in ("single", "two_gold", "negative", "partial"):
+            if t not in quota:
                 continue
-            exs = builder.multiturn(first, rng.choice(lib_chunks))
-            run(exs)
-            made += len(exs)
+            made = 0
+            while made < quota[t] and gi < len(golds):
+                need = quota[t] - made
+                n = min(len(golds) - gi, max(workers, math.ceil(need / YIELD[t])))
+                batch = golds[gi : gi + n]
+                gi += n
+                for exs in pool.map(safe(getattr(builder, t)), batch):
+                    run(exs)
+                    made += len(exs)
+                progress(t, made, quota[t])
+        if "multiturn" in quota:
+            singles = [ex for ex in kept if ex.type == "single"]
+            rng.shuffle(singles)
+            used: set[tuple[str, int]] = set()
+            pairs: list[tuple[Example, Chunk]] = []
+            for first in singles:
+                if len(pairs) >= quota["multiturn"]:
+                    break
+                same_lib = [c for c in golds if c.library == first.library and c.key not in used]
+                cands = [c for c in same_lib if c.document != first.gold[0]["document"]] or same_lib
+                if not cands:
+                    continue
+                c = rng.choice(cands)
+                used.add(c.key)
+                pairs.append((first, c))
+            made = 0
+            for exs in pool.map(safe(lambda p: builder.multiturn(*p)), pairs):
+                run(exs)
+                made += len(exs)
+            progress("multiturn", made, quota["multiturn"])
 
     kept, dup_dropped = dedupe(kept)
     stats.rejected["near_duplicate_question"] = dup_dropped
@@ -317,6 +414,7 @@ def main() -> int:
         "teacher": args.teacher,
         "contract_sha256": contract.sha256,
         "seed": args.seed,
+        "workers": workers,
         "candidates_planned": quota,
         "filters": stats.to_dict(),
         "side_rejections": dict(builder.side_rejects),
@@ -327,14 +425,15 @@ def main() -> int:
         "cache": {"hits": cache.hits, "misses": cache.misses},
         "elapsed_s": round(time.perf_counter() - started),
     }
-    if not args.dry_run:
-        OUT.mkdir(parents=True, exist_ok=True)
-        with (OUT / "candidates.jsonl").open("w", encoding="utf-8") as fh:
-            for ex in candidates:
-                fh.write(json.dumps(ex.to_json(), ensure_ascii=False) + "\n")
-        with (OUT / "dataset.jsonl").open("w", encoding="utf-8") as fh:
-            for ex in kept:
-                fh.write(json.dumps(ex.to_json(), ensure_ascii=False) + "\n")
+    OUT.mkdir(parents=True, exist_ok=True)
+    if args.dry_run:
+        write_jsonl(OUT / "dryrun-candidates.jsonl", candidates)
+        write_review(candidates, OUT / "dryrun-review.md")
+        (OUT / "dryrun-stats.json").write_text(json.dumps(summary, indent=2, ensure_ascii=False), encoding="utf-8")
+        print(f"dry run: wrote {OUT / 'dryrun-review.md'}, dryrun-candidates.jsonl and dryrun-stats.json")
+    else:
+        write_jsonl(OUT / "candidates.jsonl", candidates)
+        write_jsonl(OUT / "dataset.jsonl", kept)
         summary["splits"] = write_splits(splits, OUT)
         STATS.parent.mkdir(parents=True, exist_ok=True)
         STATS.write_text(json.dumps(summary, indent=2, ensure_ascii=False), encoding="utf-8")
